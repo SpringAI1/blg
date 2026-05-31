@@ -1,0 +1,44 @@
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build outputs
+dist/
+build/
+
+# IDE
+.idea/
+.vscode/
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+.env.local
+
+# Backend
+target/
+*.class
+*.jar
+*.war
+
+# IDE specific files
+*.swp
+*.swo
+*~
+
+# Maven
+.mvn/
+mvnw
+mvnw.cmd
+
+# Credentials
+credentials.json
+*.pem

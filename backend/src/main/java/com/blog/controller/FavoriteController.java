@@ -1,0 +1,107 @@
+package com.blog.controller;
+
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.blog.common.Result;
+import com.blog.entity.Article;
+import com.blog.entity.Favorite;
+import com.blog.repository.ArticleRepository;
+import com.blog.repository.FavoriteRepository;
+import com.blog.util.SecurityUtil;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+import java.util.stream.Collectors;
+
+@RestController
+@RequestMapping("/api/favorites")
+public class FavoriteController {
+
+    @Autowired
+    private FavoriteRepository favoriteRepository;
+
+    @Autowired
+    private ArticleRepository articleRepository;
+
+    @GetMapping
+    public Result<Page<Article>> getMyFavorites(
+                                    @RequestParam(defaultValue = "1") Integer pageNum,
+                                    @RequestParam(defaultValue = "10") Integer pageSize) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) return Result.error(401, "请先登录");
+
+        LambdaQueryWrapper<Favorite> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Favorite::getUserId, userId).orderByDesc(Favorite::getCreateTime);
+        Page<Favorite> page = new Page<>(pageNum, pageSize);
+        Page<Favorite> resultPage = favoriteRepository.selectPage(page, wrapper);
+
+        if (!resultPage.getRecords().isEmpty()) {
+            List<Long> articleIds = resultPage.getRecords().stream()
+                    .map(Favorite::getArticleId)
+                    .collect(Collectors.toList());
+            List<Article> articles = articleRepository.selectBatchIds(articleIds);
+
+            Page<Article> articlePage = new Page<>(pageNum, pageSize, resultPage.getTotal());
+            articlePage.setRecords(articles);
+            return Result.success(articlePage);
+        }
+
+        Page<Article> emptyPage = new Page<>(pageNum, pageSize, 0);
+        emptyPage.setRecords(List.of());
+        return Result.success(emptyPage);
+    }
+
+    @PostMapping
+    public Result<String> addFavorite(@RequestBody Favorite favorite) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) return Result.error(401, "请先登录");
+
+        LambdaQueryWrapper<Favorite> checkWrapper = new LambdaQueryWrapper<>();
+        checkWrapper.eq(Favorite::getUserId, userId).eq(Favorite::getArticleId, favorite.getArticleId());
+        if (favoriteRepository.selectCount(checkWrapper) > 0) {
+            return Result.error("已经收藏过了");
+        }
+
+        favorite.setUserId(userId);
+        favoriteRepository.insert(favorite);
+
+        Article article = articleRepository.selectById(favorite.getArticleId());
+        if (article != null) {
+            article.setFavoriteCount(article.getFavoriteCount() == null ? 1 : article.getFavoriteCount() + 1);
+            articleRepository.updateById(article);
+        }
+
+        return Result.success("收藏成功");
+    }
+
+    @DeleteMapping("/{articleId}")
+    public Result<String> removeFavorite(@PathVariable Long articleId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) return Result.error(401, "请先登录");
+
+        LambdaQueryWrapper<Favorite> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Favorite::getUserId, userId).eq(Favorite::getArticleId, articleId);
+        favoriteRepository.delete(wrapper);
+
+        Article article = articleRepository.selectById(articleId);
+        if (article != null && article.getFavoriteCount() != null && article.getFavoriteCount() > 0) {
+            article.setFavoriteCount(article.getFavoriteCount() - 1);
+            articleRepository.updateById(article);
+        }
+
+        return Result.success("取消收藏成功");
+    }
+
+    @GetMapping("/check/{articleId}")
+    public Result<Boolean> checkFavorite(@PathVariable Long articleId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) return Result.success(false);
+
+        LambdaQueryWrapper<Favorite> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Favorite::getUserId, userId).eq(Favorite::getArticleId, articleId);
+        boolean exists = favoriteRepository.selectCount(wrapper) > 0;
+
+        return Result.success(exists);
+    }
+}
