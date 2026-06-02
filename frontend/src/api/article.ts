@@ -25,4 +25,7 @@ export const articleApi = {
 
   likeArticle: (id: number) =>
     apiPost(`/articles/${id}/like`),
+
+  checkLike: (id: number) =>
+    apiGet<boolean>(`/articles/${id}/check-like`),
 };

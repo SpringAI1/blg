@@ -1,6 +1,6 @@
 import { Card, List, Typography, Button, Tabs, Space, Avatar, Empty, Spin, App } from 'antd';
-import { PlusOutlined, UserOutlined, CheckOutlined, TeamOutlined, StarOutlined } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
+import { PlusOutlined, UserOutlined, TeamOutlined, StarOutlined, CheckOutlined } from '@ant-design/icons';
+import { useState, useEffect, useCallback } from 'react';
 import { followApi } from '@/api/follow';
 import { useAuthStore } from '@/store/auth';
 
@@ -32,26 +32,30 @@ const Follow = () => {
     }
   }, [isAuthenticated]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
+      // 获取关注列表和粉丝列表
       const [followingRes, followersRes] = await Promise.all([
-        followApi.getMyFollowing(1, 50),
-        followApi.getMyFollowers(1, 50),
+        followApi.getMyFollowing(1, 100),
+        followApi.getMyFollowers(1, 100),
       ]);
-      setFollowing(followingRes?.records || []);
-      setFollowers(followersRes?.records || []);
+      const followingList = followingRes?.records || [];
+      const followersList = followersRes?.records || [];
+      
+      setFollowing(followingList);
+      setFollowers(followersList);
     } catch (error) {
-      console.error('Failed to fetch follow data:', error);
+      console.error('获取关注数据失败:', error);
       message.error('获取关注数据失败');
     } finally {
       setLoading(false);
     }
-  };
+  }, [message]);
 
-  const handleFollow = async (userId: number, isCurrentlyFollowing: boolean) => {
+  const handleFollow = async (userId: number, isFollowing: boolean) => {
     try {
-      if (isCurrentlyFollowing) {
+      if (isFollowing) {
         await followApi.unfollow(userId);
         message.success('已取消关注');
       } else {
@@ -59,25 +63,25 @@ const Follow = () => {
         message.success('关注成功');
       }
       fetchData();
-    } catch (error) {
+    } catch {
       message.error('操作失败');
     }
   };
 
-  const renderUserItem = (user: FollowUser, showFollowAction: boolean = true) => (
+  const renderUser = (user: FollowUser, showActions = true, isFollowingUser = false) => (
     <List.Item
       style={styles.listItem}
       actions={
-        showFollowAction
+        showActions
           ? [
               <Button
-                key="follow"
-                type="primary"
+                key="action"
+                type={isFollowingUser ? 'default' : 'primary'}
                 size="small"
-                icon={<PlusOutlined />}
-                onClick={() => handleFollow(user.id, false)}
+                icon={isFollowingUser ? <CheckOutlined /> : <PlusOutlined />}
+                onClick={() => handleFollow(user.id, isFollowingUser)}
               >
-                关注
+                {isFollowingUser ? '已关注' : '关注'}
               </Button>,
             ]
           : []
@@ -134,51 +138,6 @@ const Follow = () => {
     );
   }
 
-  const tabItems = [
-    {
-      key: 'following',
-      label: <span>关注 <span style={{ fontSize: 12, color: '#999' }}>({following.length})</span></span>,
-      children: (
-        <Spin spinning={loading}>
-          {following.length > 0 ? (
-            <List
-              dataSource={following}
-              renderItem={(user) => renderUserItem(user, false)}
-            />
-          ) : (
-            <Empty 
-              description="还没有关注任何人" 
-              style={{ padding: 48 }}
-            >
-              <Text type="secondary">去博客页面发现感兴趣的作者吧</Text>
-            </Empty>
-          )}
-        </Spin>
-      ),
-    },
-    {
-      key: 'followers',
-      label: <span>粉丝 <span style={{ fontSize: 12, color: '#999' }}>({followers.length})</span></span>,
-      children: (
-        <Spin spinning={loading}>
-          {followers.length > 0 ? (
-            <List
-              dataSource={followers}
-              renderItem={(user) => renderUserItem(user, true)}
-            />
-          ) : (
-            <Empty 
-              description="还没有粉丝" 
-              style={{ padding: 48 }}
-            >
-              <Text type="secondary">发表优质内容吸引更多关注</Text>
-            </Empty>
-          )}
-        </Spin>
-      ),
-    },
-  ];
-
   return (
     <div style={styles.container}>
       <div style={styles.header}>
@@ -186,24 +145,56 @@ const Follow = () => {
       </div>
 
       <Card>
-        <Tabs items={tabItems} defaultActiveKey="following" />
+        <Tabs
+          defaultActiveKey="following"
+          items={[
+            {
+              key: 'following',
+              label: <span>关注 <span style={{ fontSize: 12, color: '#999' }}>({following.length})</span></span>,
+              children: (
+                <Spin spinning={loading}>
+                  {following.length > 0 ? (
+                    <List
+                      dataSource={following}
+                      renderItem={(user) => renderUser(user, true, true)}
+                    />
+                  ) : (
+                    <Empty description="还没有关注任何人">
+                      <Text type="secondary">去博客页面发现感兴趣的作者吧</Text>
+                    </Empty>
+                  )}
+                </Spin>
+              ),
+            },
+            {
+              key: 'followers',
+              label: <span>粉丝 <span style={{ fontSize: 12, color: '#999' }}>({followers.length})</span></span>,
+              children: (
+                <Spin spinning={loading}>
+                  {followers.length > 0 ? (
+                    <List
+                      dataSource={followers}
+                      renderItem={(user) => renderUser(user, true, following.some(f => f.id === user.id))}
+                    />
+                  ) : (
+                    <Empty description="还没有粉丝">
+                      <Text type="secondary">发表优质内容吸引更多关注</Text>
+                    </Empty>
+                  )}
+                </Spin>
+              ),
+            },
+          ]}
+        />
       </Card>
     </div>
   );
 };
 
 const styles: Record<string, React.CSSProperties> = {
-  container: {
-    background: '#fff',
-    borderRadius: 8,
-    padding: 24,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  listItem: {
-    padding: '16px 0',
-  },
+  container: { background: '#fff', borderRadius: 8, padding: 24 },
+  header: { marginBottom: 24 },
+  listItem: { padding: '16px 0' },
 };
 
 export default Follow;

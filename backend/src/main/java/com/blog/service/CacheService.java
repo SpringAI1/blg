@@ -15,7 +15,7 @@ import java.util.stream.Collectors;
 @Service
 public class CacheService {
 
-    @Autowired
+    @Autowired(required = false)
     private RedisTemplate<String, Object> redisTemplate;
 
     private final ObjectMapper objectMapper;
@@ -30,11 +30,25 @@ public class CacheService {
      * 存储对象到缓存 — 利用 RedisTemplate 的 GenericJackson2JsonRedisSerializer 自动序列化
      */
     public void set(String key, Object value, long timeout, TimeUnit unit) {
-        redisTemplate.opsForValue().set(key, value, timeout, unit);
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            redisTemplate.opsForValue().set(key, value, timeout, unit);
+        } catch (Exception e) {
+            System.err.println("Redis set failed: " + e.getMessage());
+        }
     }
 
     public void setWithDuration(String key, Object value, Duration duration) {
-        redisTemplate.opsForValue().set(key, value, duration);
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            redisTemplate.opsForValue().set(key, value, duration);
+        } catch (Exception e) {
+            System.err.println("Redis setWithDuration failed: " + e.getMessage());
+        }
     }
 
     /**
@@ -42,43 +56,74 @@ public class CacheService {
      */
     @SuppressWarnings("unchecked")
     public <T> T get(String key, Class<T> clazz) {
-        Object value = redisTemplate.opsForValue().get(key);
-        if (value == null) {
+        if (redisTemplate == null) {
             return null;
         }
-        // 如果值已经是目标类型，直接返回
-        if (clazz.isInstance(value)) {
-            return (T) value;
-        }
-        // 否则尝试通过 JSON 转换
         try {
+            Object value = redisTemplate.opsForValue().get(key);
+            if (value == null) {
+                return null;
+            }
+            if (clazz.isInstance(value)) {
+                return (T) value;
+            }
             String json = objectMapper.writeValueAsString(value);
             return objectMapper.readValue(json, clazz);
         } catch (Exception e) {
-            e.printStackTrace();
+            System.err.println("Redis get failed: " + e.getMessage());
             return null;
         }
     }
 
     public void delete(String key) {
-        redisTemplate.delete(key);
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            redisTemplate.delete(key);
+        } catch (Exception e) {
+            System.err.println("Redis delete failed: " + e.getMessage());
+        }
     }
 
     /**
      * 按模式删除缓存键
      */
     public void deleteByPattern(String pattern) {
-        Set<String> keys = redisTemplate.keys(pattern);
-        if (keys != null && !keys.isEmpty()) {
-            redisTemplate.delete(keys);
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            Set<String> keys = redisTemplate.keys(pattern);
+            if (keys != null && !keys.isEmpty()) {
+                redisTemplate.delete(keys);
+            }
+        } catch (Exception e) {
+            System.err.println("Redis deleteByPattern failed: " + e.getMessage());
         }
     }
 
     public boolean exists(String key) {
-        return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        if (redisTemplate == null) {
+            return false;
+        }
+        try {
+            return Boolean.TRUE.equals(redisTemplate.hasKey(key));
+        } catch (Exception e) {
+            System.err.println("Redis exists failed: " + e.getMessage());
+            return false;
+        }
     }
 
     public Long getExpire(String key) {
-        return redisTemplate.getExpire(key);
+        if (redisTemplate == null) {
+            return null;
+        }
+        try {
+            return redisTemplate.getExpire(key);
+        } catch (Exception e) {
+            System.err.println("Redis getExpire failed: " + e.getMessage());
+            return null;
+        }
     }
 }

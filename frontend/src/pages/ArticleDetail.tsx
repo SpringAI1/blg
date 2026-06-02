@@ -10,6 +10,7 @@ import { favoriteApi } from '@/api/favorite';
 import { followApi } from '@/api/follow';
 import { commentApi } from '@/api/comment';
 import { useAuthStore } from '@/store/auth';
+import { recordHistory } from '@/pages/History';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -47,6 +48,7 @@ const ArticleDetail = () => {
     try {
       const data = await articleApi.getPublishedArticle(Number(id));
       setArticle(data);
+      if (id) recordHistory(Number(id));
       fetchComments();
     } catch (error) {
       message.error('加载文章失败');
@@ -88,6 +90,16 @@ const ArticleDetail = () => {
     }
   };
 
+  const checkLike = async () => {
+    if (!id) return;
+    try {
+      const res = await articleApi.checkLike(Number(id));
+      setIsLiked(res || false);
+    } catch (error) {
+      console.error('Check like failed:', error);
+    }
+  };
+
   useEffect(() => {
     fetchArticle();
     window.scrollTo(0, 0);
@@ -96,6 +108,7 @@ const ArticleDetail = () => {
   useEffect(() => {
     if (article) {
       checkFavorite();
+      checkLike();
       if (isAuthenticated) {
         checkFollow();
       }
@@ -168,26 +181,16 @@ const ArticleDetail = () => {
 
     setSubmitting(true);
     try {
-      const token = localStorage.getItem('authToken');
-      const response = await fetch(`http://localhost:8080/api/articles/${id}/comments`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ content: values.content.trim(), parentId: null }),
+      const result = await commentApi.addComment(Number(id), { 
+        content: values.content.trim()
       });
-
-      const result = await response.json();
-      if (result.success) {
+      if (result) {
         message.success('评论成功');
         form.resetFields();
         fetchComments();
-      } else {
-        message.error(result.message || '评论失败');
       }
-    } catch (error) {
-      message.error('评论失败');
+    } catch (error: any) {
+      message.error(error.message || '评论失败');
     } finally {
       setSubmitting(false);
     }

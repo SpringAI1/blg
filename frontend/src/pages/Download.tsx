@@ -1,4 +1,4 @@
-import { Card, List, Typography, Button, Tag, Space, message, Empty, Spin, Rate } from 'antd';
+import { Card, List, Typography, Button, Tag, Space, App, Empty, Spin, Rate } from 'antd';
 import { DownloadOutlined, StarOutlined, EyeOutlined, FileTextOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 
@@ -17,6 +17,7 @@ interface DownloadItem {
 }
 
 const Download = () => {
+  const { message } = App.useApp();
   const [items, setItems] = useState<DownloadItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);

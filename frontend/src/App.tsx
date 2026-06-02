@@ -24,6 +24,8 @@ import Study from '@/pages/Study';
 import Community from '@/pages/Community';
 import Subscribe from '@/pages/Subscribe';
 import Follow from '@/pages/Follow';
+import History from '@/pages/History';
+import TechMeeting from '@/pages/TechMeeting';
 
 function App() {
   return (
@@ -31,14 +33,14 @@ function App() {
       locale={zhCN}
       theme={{
         token: {
-          colorPrimary: '#1890ff',
+          colorPrimary: '#ff6b00',
         },
       }}
     >
       <AntdApp>
         <Routes>
+          <Route index element={<Home />} />
           <Route path="/" element={<Layout />}>
-            <Route index element={<Home />} />
             <Route path="blog" element={<Blog />} />
             <Route path="search" element={<Search />} />
             <Route path="ai-search" element={<AISearch />} />
@@ -48,6 +50,8 @@ function App() {
             <Route path="community" element={<Community />} />
             <Route path="subscribe" element={<Subscribe />} />
             <Route path="follow" element={<Follow />} />
+            <Route path="history" element={<History />} />
+            <Route path="tech-meeting" element={<TechMeeting />} />
             <Route path="article/:id" element={<ArticleDetail />} />
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />

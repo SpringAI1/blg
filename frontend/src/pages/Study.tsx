@@ -1,306 +1,247 @@
-import { Card, List, Typography, Button, Tag, Space, Empty, Spin, Progress } from 'antd';
-import { BookOutlined, PlayCircleOutlined, CheckCircleOutlined, TeamOutlined } from '@ant-design/icons';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import { Card, List, Typography, Tag, Empty, Spin, App, Space, Button, Progress, Row, Col, message as antMessage } from 'antd';
+import { BookOutlined, PlayCircleOutlined, PauseCircleOutlined, RightOutlined, ClockCircleOutlined, EyeOutlined, LikeOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { useNavigate } from 'react-router-dom';
+import { Article, Category } from '@/types';
+import { articleApi } from '@/api/article';
+import { categoryApi } from '@/api/category';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
-interface Course {
-  id: number;
-  title: string;
-  description: string;
-  category: string;
-  progress: number;
-  lessons: number;
-  completedLessons: number;
-  students: number;
-  icon: string;
-}
+const STUDY_KEY = 'learning_progress';
 
-interface LearningPath {
-  id: number;
-  title: string;
-  description: string;
-  courses: number;
-  duration: string;
-  level: string;
-  icon: string;
+interface StudyProgress {
+  articleId: number;
+  status: 'in_progress' | 'completed' | 'paused';
+  startedAt: string;
+  lastAccessedAt: string;
+  progress: number; // 0-100
 }
 
 const Study = () => {
-  const [courses, setCourses] = useState<Course[]>([]);
-  const [paths, setPaths] = useState<LearningPath[]>([]);
+  const navigate = useNavigate();
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'courses' | 'paths'>('courses');
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [studyProgress, setStudyProgress] = useState<Map<number, StudyProgress>>(new Map());
 
   useEffect(() => {
-    fetchData();
+    loadProgress();
+    fetchCategories();
   }, []);
 
-  const fetchData = async () => {
+  useEffect(() => {
+    fetchArticles();
+  }, [selectedCategory]);
+
+  const loadProgress = () => {
+    try {
+      const raw = localStorage.getItem(STUDY_KEY);
+      if (raw) {
+        const data: Record<string, StudyProgress> = JSON.parse(raw);
+        const map = new Map<number, StudyProgress>();
+        Object.entries(data).forEach(([key, val]) => map.set(Number(key), val));
+        setStudyProgress(map);
+      }
+    } catch { /* ignore */ }
+  };
+
+  const saveProgress = (articleId: number, updates: Partial<StudyProgress>) => {
+    try {
+      const raw = localStorage.getItem(STUDY_KEY);
+      const data: Record<string, StudyProgress> = raw ? JSON.parse(raw) : {};
+      const existing = data[articleId] || {
+        articleId, status: 'in_progress' as const,
+        startedAt: new Date().toISOString(),
+        lastAccessedAt: new Date().toISOString(),
+        progress: 0,
+      };
+      data[articleId] = { ...existing, ...updates, lastAccessedAt: new Date().toISOString() };
+      localStorage.setItem(STUDY_KEY, JSON.stringify(data));
+      loadProgress();
+    } catch { /* ignore */ }
+  };
+
+  const handleStartOrContinue = (article: Article) => {
+    const progress = studyProgress.get(article.id);
+    if (!progress) {
+      saveProgress(article.id, {
+        status: 'in_progress', progress: 10, startedAt: new Date().toISOString(),
+      });
+    } else if (progress.status === 'paused') {
+      saveProgress(article.id, { status: 'in_progress' });
+    }
+    navigate(`/article/${article.id}`);
+  };
+
+  const handlePause = (e: React.MouseEvent, articleId: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    saveProgress(articleId, { status: 'paused' });
+    antMessage.success('已暂停学习');
+  };
+
+  const handleComplete = (e: React.MouseEvent, articleId: number) => {
+    e.stopPropagation();
+    e.preventDefault();
+    saveProgress(articleId, { status: 'completed', progress: 100 });
+    antMessage.success('已完成学习！');
+  };
+
+  const fetchArticles = async () => {
     setLoading(true);
     try {
-      const mockCourses: Course[] = [
-        {
-          id: 1,
-          title: 'Java入门到精通',
-          description: '从零开始学习Java编程，掌握Java基础语法、面向对象思想和常用框架。',
-          category: 'Java',
-          progress: 65,
-          lessons: 120,
-          completedLessons: 78,
-          students: 15420,
-          icon: '☕',
-        },
-        {
-          id: 2,
-          title: 'Python数据分析',
-          description: '学习Python数据分析的核心技能，包括Pandas、NumPy和数据可视化。',
-          category: 'Python',
-          progress: 30,
-          lessons: 85,
-          completedLessons: 25,
-          students: 23150,
-          icon: '🐍',
-        },
-        {
-          id: 3,
-          title: 'React实战开发',
-          description: '深入学习React生态系统，包括Hooks、Redux和Next.js。',
-          category: '前端',
-          progress: 0,
-          lessons: 95,
-          completedLessons: 0,
-          students: 12380,
-          icon: '⚛️',
-        },
-        {
-          id: 4,
-          title: '机器学习基础',
-          description: '机器学习入门课程，涵盖监督学习、无监督学习和深度学习基础。',
-          category: 'AI',
-          progress: 15,
-          lessons: 150,
-          completedLessons: 22,
-          students: 35670,
-          icon: '🤖',
-        },
-      ];
-
-      const mockPaths: LearningPath[] = [
-        {
-          id: 1,
-          title: 'Java工程师学习路径',
-          description: '从Java基础到高级架构师的学习路径，循序渐进掌握Java核心技术。',
-          courses: 15,
-          duration: '120小时',
-          level: '中级',
-          icon: '☕',
-        },
-        {
-          id: 2,
-          title: '前端工程师学习路径',
-          description: '从HTML/CSS到React/Vue全栈开发，打造完整的前端知识体系。',
-          courses: 18,
-          duration: '150小时',
-          level: '初级',
-          icon: '⚛️',
-        },
-        {
-          id: 3,
-          title: 'AI工程师学习路径',
-          description: '从机器学习基础到深度学习实战，迈向AI工程师的必经之路。',
-          courses: 20,
-          duration: '200小时',
-          level: '高级',
-          icon: '🤖',
-        },
-      ];
-
-      setCourses(mockCourses);
-      setPaths(mockPaths);
+      const data = await articleApi.getPublishedArticles(1, 50, selectedCategory || undefined);
+      setArticles(data.records || []);
     } catch (error) {
-      console.error('Failed to fetch study data:', error);
+      console.error('加载文章失败:', error);
     } finally {
       setLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div style={{ textAlign: 'center', padding: 50 }}>
-        <Spin size="large" />
-      </div>
-    );
-  }
+  const fetchCategories = async () => {
+    try {
+      const data = await categoryApi.getAllCategories();
+      setCategories(data || []);
+    } catch { /* ignore */ }
+  };
+
+  const getProgress = (articleId: number): StudyProgress | undefined => studyProgress.get(articleId);
+
+  // 排序：进行中 > 已暂停 > 已完成 > 未开始
+  const sortedArticles = [...articles].sort((a, b) => {
+    const pa = getProgress(a.id);
+    const pb = getProgress(b.id);
+    const order = { 'in_progress': 0, 'paused': 1, 'completed': 2 };
+    const oa = pa ? (order[pa.status] ?? 3) : 3;
+    const ob = pb ? (order[pb.status] ?? 3) : 3;
+    return oa - ob;
+  });
 
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <Title level={2} style={{ margin: 0 }}>学习中心</Title>
+        <Title level={2} style={{ margin: 0 }}>
+          <BookOutlined style={{ marginRight: 8, color: '#1890ff' }} />
+          学习中心
+        </Title>
+        <Space>
+          <Text type="secondary">
+            学习中: {Array.from(studyProgress.values()).filter(p => p.status === 'in_progress').length}
+            {' | '}已完成: {Array.from(studyProgress.values()).filter(p => p.status === 'completed').length}
+          </Text>
+          <Button size="small" icon={<ReloadOutlined />} onClick={loadProgress}>刷新</Button>
+        </Space>
       </div>
 
-      <div style={styles.tabs}>
-        <Button
-          type={activeTab === 'courses' ? 'primary' : 'default'}
-          icon={<BookOutlined />}
-          onClick={() => setActiveTab('courses')}
-        >
-          我的课程
+      <div style={styles.filterBar}>
+        <Button type={selectedCategory === null ? 'primary' : 'default'} shape="round"
+          onClick={() => setSelectedCategory(null)} style={{ marginRight: 8, marginBottom: 8 }}>
+          全部
         </Button>
-        <Button
-          type={activeTab === 'paths' ? 'primary' : 'default'}
-          icon={<TeamOutlined />}
-          onClick={() => setActiveTab('paths')}
-        >
-          学习路径
-        </Button>
+        {categories.map(cat => (
+          <Button key={cat.id} type={selectedCategory === cat.id ? 'primary' : 'default'} shape="round"
+            onClick={() => setSelectedCategory(cat.id)} style={{ marginRight: 8, marginBottom: 8 }}>
+            {cat.name}
+          </Button>
+        ))}
       </div>
 
-      {activeTab === 'courses' ? (
-        courses.length === 0 ? (
-          <Empty description="暂无学习课程" />
+      <Spin spinning={loading}>
+        {sortedArticles.length === 0 ? (
+          <Empty description="暂无学习内容" style={{ padding: 48 }} />
         ) : (
-          <List
-            dataSource={courses}
-            renderItem={(course) => (
-              <List.Item style={styles.listItem}>
-                <Card hoverable style={{ width: '100%' }}>
-                  <div style={styles.courseContent}>
-                    <div style={styles.iconBox}>
-                      <span style={{ fontSize: 36 }}>{course.icon}</span>
+          <Row gutter={[16, 16]}>
+            {sortedArticles.map((article) => {
+              const progress = getProgress(article.id);
+              return (
+                <Col xs={24} sm={12} lg={8} key={article.id}>
+                  <Card
+                    hoverable
+                    style={{
+                      height: '100%', borderRadius: 12,
+                      borderLeft: progress?.status === 'in_progress' ? '3px solid #1890ff' :
+                                  progress?.status === 'completed' ? '3px solid #52c41a' :
+                                  progress?.status === 'paused' ? '3px solid #faad14' : 'none',
+                    }}
+                    onClick={() => navigate(`/article/${article.id}`)}
+                  >
+                    <div style={styles.cardIcon}>
+                      {progress?.status === 'completed' ? (
+                        <CheckCircleOutlined style={{ fontSize: 28, color: '#52c41a' }} />
+                      ) : (
+                        <BookOutlined style={{ fontSize: 28, color: '#1890ff' }} />
+                      )}
                     </div>
-                    <div style={styles.courseInfo}>
-                      <div style={styles.courseHeader}>
-                        <Title level={4} style={{ margin: 0 }}>{course.title}</Title>
-                        <Tag color="blue">{course.category}</Tag>
-                      </div>
-                      <Paragraph ellipsis={{ rows: 2 }} style={{ margin: '12px 0', color: '#666' }}>
-                        {course.description}
-                      </Paragraph>
-                      <div style={styles.courseMeta}>
-                        <Space size="large">
-                          <span>课程数: {course.lessons}</span>
-                          <span>学习人数: {course.students.toLocaleString()}</span>
-                          <span>
-                            已完成: {course.completedLessons}/{course.lessons}
-                          </span>
-                        </Space>
-                      </div>
-                      <div style={styles.progressSection}>
-                        <Progress
-                          percent={course.progress}
-                          status="active"
-                          strokeColor="#1890ff"
-                        />
-                      </div>
+                    <Title level={4} style={{ marginTop: 12, marginBottom: 8, color: '#1a1a1a', fontSize: 16 }}>
+                      {article.title}
+                    </Title>
+                    <Text style={{ color: '#666', fontSize: 13, display: 'block', marginBottom: 8, lineHeight: 1.5 }}>
+                      {article.summary || article.content?.substring(0, 60) || ''}...
+                    </Text>
+                    <Space size="small" style={{ marginBottom: 8 }}>
+                      {article.categoryName && <Tag color="blue" style={{ borderRadius: 8 }}>{article.categoryName}</Tag>}
+                      {progress?.status === 'completed' && <Tag color="success">已完成</Tag>}
+                      {progress?.status === 'paused' && <Tag color="warning">已暂停</Tag>}
+                      {progress?.status === 'in_progress' && <Tag color="processing">学习中</Tag>}
+                    </Space>
+                    <Progress
+                      percent={progress?.progress ?? 0}
+                      size="small"
+                      strokeColor={progress?.status === 'completed' ? '#52c41a' : '#1890ff'}
+                      format={() => `${progress?.progress ?? 0}%`}
+                    />
+                    <div style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Space size={12}>
+                        <Text type="secondary" style={{ fontSize: 11 }}>
+                          <EyeOutlined style={{ marginRight: 2 }} />{article.views?.toLocaleString()}
+                        </Text>
+                        {progress?.status === 'paused' && (
+                          <Button type="link" size="small" icon={<PlayCircleOutlined />}
+                            onClick={() => handleStartOrContinue(article)}>继续</Button>
+                        )}
+                      </Space>
+                      <Space>
+                        {(!progress || progress.status === 'paused') && (
+                          <Button type="primary" size="small" icon={<PlayCircleOutlined />}
+                            onClick={() => handleStartOrContinue(article)}>
+                            {progress?.status === 'paused' ? '继续' : '开始学习'}
+                          </Button>
+                        )}
+                        {progress?.status === 'in_progress' && (
+                          <>
+                            <Button size="small" icon={<PauseCircleOutlined />}
+                              onClick={(e) => handlePause(e, article.id)}>暂停</Button>
+                            <Button type="primary" size="small" icon={<CheckCircleOutlined />}
+                              onClick={(e) => handleComplete(e, article.id)}>完成</Button>
+                          </>
+                        )}
+                        {progress?.status === 'completed' && (
+                          <Button size="small" icon={<ReloadOutlined />}
+                            onClick={() => { saveProgress(article.id, { status: 'in_progress', progress: 0 }); }}>
+                            重新学习
+                          </Button>
+                        )}
+                      </Space>
                     </div>
-                    <div style={styles.courseActions}>
-                      <Button type="primary" icon={<PlayCircleOutlined />} size="large">
-                        {course.progress > 0 ? '继续学习' : '开始学习'}
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-              </List.Item>
-            )}
-          />
-        )
-      ) : (
-        <List
-          grid={{ gutter: 16, xs: 1, sm: 1, md: 2, lg: 3, xl: 3, xxl: 3 }}
-          dataSource={paths}
-          renderItem={(path) => (
-            <List.Item>
-              <Card hoverable style={styles.pathCard}>
-                <div style={styles.pathIcon}>
-                  <span style={{ fontSize: 48 }}>{path.icon}</span>
-                </div>
-                <Title level={4} style={{ marginTop: 16 }}>{path.title}</Title>
-                <Paragraph ellipsis={{ rows: 2 }} style={{ color: '#666', margin: '12px 0' }}>
-                  {path.description}
-                </Paragraph>
-                <div style={styles.pathMeta}>
-                  <Space size="middle">
-                    <Tag icon={<BookOutlined />}>{path.courses}门课程</Tag>
-                    <Tag>{path.duration}</Tag>
-                    <Tag color={path.level === '初级' ? 'green' : path.level === '中级' ? 'orange' : 'red'}>
-                      {path.level}
-                    </Tag>
-                  </Space>
-                </div>
-                <Button type="primary" block style={{ marginTop: 16 }}>
-                  开始学习
-                </Button>
-              </Card>
-            </List.Item>
-          )}
-        />
-      )}
+                  </Card>
+                </Col>
+              );
+            })}
+          </Row>
+        )}
+      </Spin>
     </div>
   );
 };
 
 const styles: Record<string, React.CSSProperties> = {
-  container: {
-    background: '#fff',
-    borderRadius: 8,
-    padding: 24,
-  },
-  header: {
-    marginBottom: 24,
-  },
-  tabs: {
-    display: 'flex',
-    gap: 12,
-    marginBottom: 24,
-  },
-  listItem: {
-    padding: '16px 0',
-  },
-  courseContent: {
-    display: 'flex',
-    gap: 20,
-    alignItems: 'flex-start',
-  },
-  iconBox: {
-    width: 80,
-    height: 80,
-    background: '#f5f5f5',
-    borderRadius: 12,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  courseInfo: {
-    flex: 1,
-  },
-  courseHeader: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: 12,
-  },
-  courseMeta: {
-    color: '#999',
-    fontSize: 13,
-    marginTop: 8,
-  },
-  progressSection: {
-    marginTop: 12,
-  },
-  courseActions: {
-    flexShrink: 0,
-  },
-  pathCard: {
-    textAlign: 'center',
-    height: '100%',
-  },
-  pathIcon: {
-    marginBottom: 8,
-  },
-  pathMeta: {
-    marginTop: 12,
-  },
+  container: { background: '#fff', borderRadius: 8, padding: 24 },
+  header: { marginBottom: 24, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' },
+  filterBar: { marginBottom: 24, display: 'flex', flexWrap: 'wrap' },
+  cardIcon: { width: 56, height: 56, borderRadius: 12, background: '#f0f5ff', display: 'flex', alignItems: 'center', justifyContent: 'center' },
 };
 
 export default Study;

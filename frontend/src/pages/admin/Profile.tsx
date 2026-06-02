@@ -1,9 +1,10 @@
-import { Form, Input, Button, message } from 'antd';
+import { Form, Input, Button, App } from 'antd';
 import { userApi } from '@/api/user';
 import { useAuthStore } from '@/store/auth';
 
 const Profile = () => {
   const { user, setAuth } = useAuthStore();
+  const { message } = App.useApp();
   const [form] = Form.useForm();
 
   const onFinish = async (values: any) => {

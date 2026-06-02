@@ -50,6 +50,20 @@ public class CommentController {
             return Result.error(401, "请先登录");
         }
 
+        // 获取评论并检查所有权
+        Comment existing = commentService.getById(id);
+        if (existing == null) {
+            return Result.error(404, "评论不存在");
+        }
+
+        // 只有评论作者或 ADMIN 可以删除
+        if (!existing.getUserId().equals(userId)) {
+            String role = SecurityUtil.getCurrentUser() != null ? SecurityUtil.getCurrentUser().getRole() : "";
+            if (!"ADMIN".equals(role)) {
+                return Result.error(403, "只能删除自己的评论");
+            }
+        }
+
         commentService.deleteComment(id);
         return Result.success();
     }

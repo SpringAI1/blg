@@ -9,6 +9,7 @@ import {
   UserOutlined,
   LogoutOutlined,
   HomeOutlined,
+  ArrowLeftOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/api/auth';
@@ -35,32 +36,32 @@ const AdminLayout = () => {
     {
       key: 'dashboard',
       icon: <DashboardOutlined />,
-      label: <Link to="/admin">Dashboard</Link>,
+      label: <Link to="/admin">控制台</Link>,
     },
     {
       key: 'articles',
       icon: <FileTextOutlined />,
-      label: <Link to="/admin/articles">Articles</Link>,
+      label: <Link to="/admin/articles">文章管理</Link>,
     },
     {
       key: 'categories',
       icon: <FolderOutlined />,
-      label: <Link to="/admin/categories">Categories</Link>,
+      label: <Link to="/admin/categories">分类管理</Link>,
     },
     {
       key: 'tags',
       icon: <TagsOutlined />,
-      label: <Link to="/admin/tags">Tags</Link>,
+      label: <Link to="/admin/tags">标签管理</Link>,
     },
     {
       key: 'comments',
       icon: <MessageOutlined />,
-      label: <Link to="/admin/comments">Comments</Link>,
+      label: <Link to="/admin/comments">评论管理</Link>,
     },
     {
       key: 'profile',
       icon: <UserOutlined />,
-      label: <Link to="/admin/profile">Profile</Link>,
+      label: <Link to="/admin/profile">个人资料</Link>,
     },
   ];
 
@@ -68,12 +69,12 @@ const AdminLayout = () => {
     {
       key: 'home',
       icon: <HomeOutlined />,
-      label: <Link to="/">Back to Blog</Link>,
+      label: <Link to="/">返回博客</Link>,
     },
     {
       key: 'logout',
       icon: <LogoutOutlined />,
-      label: 'Logout',
+      label: '退出登录',
       onClick: handleLogout,
     },
   ];
@@ -81,13 +82,20 @@ const AdminLayout = () => {
   return (
     <Layout style={{ minHeight: '100vh' }}>
       <Sider theme="light" style={{ borderRight: '1px solid #f0f0f0' }}>
-        <div style={styles.logo}>Admin Dashboard</div>
+        <div style={styles.logo}>管理后台</div>
         <Menu mode="inline" items={menuItems} style={{ height: '100%', borderRight: 0 }} />
       </Sider>
 
       <Layout>
         <Header style={styles.header}>
           <div style={styles.headerContent}>
+            <Button
+              icon={<ArrowLeftOutlined />}
+              onClick={() => navigate('/')}
+              style={{ marginRight: 16 }}
+            >
+              返回首页
+            </Button>
             <div />
             <Dropdown menu={{ items: userMenuItems }}>
               <Avatar

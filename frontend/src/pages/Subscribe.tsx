@@ -1,4 +1,4 @@
-import { Card, List, Typography, Button, Tag, Space, Switch, Empty, Spin, message } from 'antd';
+import { Card, List, Typography, Button, Tag, Space, Switch, Empty, Spin, App } from 'antd';
 import { BellOutlined, MailOutlined, TeamOutlined, MessageOutlined } from '@ant-design/icons';
 import { useState, useEffect } from 'react';
 
@@ -14,6 +14,7 @@ interface Subscription {
 }
 
 const Subscribe = () => {
+  const { message } = App.useApp();
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([]);
   const [loading, setLoading] = useState(true);
 

@@ -75,7 +75,7 @@ const LayoutComponent = () => {
         window.open('https://inscode.net', '_blank');
         break;
       case 'tech-meeting':
-        window.open('https://tpc.org.cn', '_blank');
+        navigate('/tech-meeting');
         break;
       case 'subscribe':
         navigate('/subscribe');
@@ -87,7 +87,7 @@ const LayoutComponent = () => {
         navigate('/favorites');
         break;
       case 'history':
-        navigate('/favorites');
+        navigate('/history');
         break;
       case 'member-center':
         if (isAuthenticated) {
@@ -121,6 +121,7 @@ const LayoutComponent = () => {
     if (path.startsWith('/follow')) return 'follow';
     if (path.startsWith('/favorites')) return 'collection';
     if (path.startsWith('/search')) return 'search';
+    if (path.startsWith('/history')) return 'history';
     return '';
   };
 

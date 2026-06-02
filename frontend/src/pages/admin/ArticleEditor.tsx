@@ -1,11 +1,14 @@
-import { Form, Input, Select, Button, Card, Spin, App } from 'antd';
+import { Form, Input, Select, Button, Card, Spin, App, Upload, Image } from 'antd';
+import { UploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { articleApi } from '@/api/article';
 import { categoryApi } from '@/api/category';
 import { tagApi } from '@/api/tag';
+import { fileApi } from '@/api/file';
 import { Category } from '@/types';
 import { Tag as TagType } from '@/types';
+import { useAuthStore } from '@/store/auth';
 
 const { TextArea } = Input;
 
@@ -15,19 +18,28 @@ const ArticleEditor = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<TagType[]>([]);
   const [initialLoading, setInitialLoading] = useState(!!id);
+  const [coverImageUrl, setCoverImageUrl] = useState<string>('');
+  const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
+    if (!isAuthenticated) {
+      message.warning('请先登录');
+      navigate('/login');
+      return;
+    }
+
     const fetchData = async () => {
       try {
         const [cats, tgs] = await Promise.all([
           categoryApi.getAllCategories(),
           tagApi.getAllTags(),
         ]);
-        setCategories(cats);
-        setTags(tgs);
+        setCategories(cats || []);
+        setTags(tgs || []);
 
         if (id) {
           const article = await articleApi.getArticle(Number(id));
@@ -40,17 +52,45 @@ const ArticleEditor = () => {
             categoryId: article.categoryId,
             tagIds: article.tags?.map((t) => t.id),
           });
+          if (article.coverImage) {
+            setCoverImageUrl(article.coverImage);
+          }
         }
-      } catch {
-        message.error('加载数据失败');
+      } catch (err: any) {
+        console.error('加载数据失败:', err);
+        message.error('加载数据失败: ' + (err.message || '未知错误'));
       } finally {
         setInitialLoading(false);
       }
     };
     fetchData();
-  }, [id, form]);
+  }, [id, form, isAuthenticated, navigate, message]);
+
+  const handleImageUpload = async (file: File) => {
+    setUploading(true);
+    try {
+      const result = await fileApi.upload(file);
+      if (result?.url) {
+        form.setFieldValue('coverImage', result.url);
+        setCoverImageUrl(result.url);
+        message.success('图片上传成功');
+      }
+    } catch (err: any) {
+      console.error('上传失败:', err);
+      message.error('图片上传失败: ' + (err.message || '未知错误'));
+    } finally {
+      setUploading(false);
+    }
+    return Promise.resolve(false);
+  };
 
   const onFinish = async (values: any) => {
+    if (!isAuthenticated) {
+      message.warning('请先登录');
+      navigate('/login');
+      return;
+    }
+
     setLoading(true);
     try {
       if (id) {
@@ -61,8 +101,9 @@ const ArticleEditor = () => {
         message.success('文章创建成功');
       }
       navigate('/admin/articles');
-    } catch {
-      message.error('保存文章失败');
+    } catch (err: any) {
+      console.error('保存文章失败:', err);
+      message.error('保存文章失败: ' + (err.message || '未知错误'));
     } finally {
       setLoading(false);
     }
@@ -94,17 +135,48 @@ const ArticleEditor = () => {
           </Form.Item>
 
           <Form.Item
-            label="摘要"
+            label="文章摘要"
             name="summary"
+            rules={[{ required: true, message: '请输入文章摘要！' }]}
           >
-            <TextArea rows={2} placeholder="文章摘要" />
+            <TextArea 
+              rows={4} 
+              placeholder="请输入文章摘要，这将显示在文章列表中" 
+              showCount
+              maxLength={500}
+            />
           </Form.Item>
 
           <Form.Item
-            label="封面图片URL"
+            label="封面图片"
             name="coverImage"
           >
-            <Input placeholder="https://..." />
+            <div>
+              {coverImageUrl && (
+                <div style={{ marginBottom: 16 }}>
+                  <Image
+                    width={200}
+                    src={coverImageUrl}
+                    alt="封面预览"
+                  />
+                </div>
+              )}
+              <Upload
+                beforeUpload={handleImageUpload}
+                showUploadList={false}
+                accept="image/*"
+              >
+                <Button 
+                  icon={<UploadOutlined />} 
+                  loading={uploading}
+                >
+                  点击上传封面图片
+                </Button>
+              </Upload>
+              <div style={{ marginTop: 8, color: '#666', fontSize: 12 }}>
+                支持 JPG、PNG、GIF 格式，建议尺寸 1200x630
+              </div>
+            </div>
           </Form.Item>
 
           <Form.Item

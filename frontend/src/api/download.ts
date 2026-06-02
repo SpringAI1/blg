@@ -48,6 +48,6 @@ export const downloadApi = {
     apiPost<void>(`/downloads/${id}/download`),
 
   redirectToDownload: (id: number) => {
-    window.open(`http://localhost:8080/api/downloads/${id}/redirect`, '_blank');
+    window.open(`/api/downloads/${id}/redirect`, '_blank');
   },
 };

@@ -1,4 +1,4 @@
-import { Table, Button, Tag, message } from 'antd';
+import { Table, Button, Tag, App } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ColumnType } from 'antd/es/table';
@@ -7,15 +7,20 @@ import { articleApi } from '@/api/article';
 import dayjs from 'dayjs';
 
 const ArticleList = () => {
+  const { message } = App.useApp();
   const [articles, setArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const navigate = useNavigate();
 
-  const fetchArticles = async () => {
+  const fetchArticles = async (pageNum: number) => {
     setLoading(true);
     try {
-      const data = await articleApi.getArticlesByUser(1, 100);
+      const data = await articleApi.getArticlesByUser(pageNum, 10);
       setArticles(data.records);
+      setTotal(data.total);
+      setPage(pageNum);
     } catch {
       message.error('加载文章失败');
     } finally {
@@ -24,14 +29,14 @@ const ArticleList = () => {
   };
 
   useEffect(() => {
-    fetchArticles();
+    fetchArticles(1);
   }, []);
 
   const handleDelete = async (id: number) => {
     try {
       await articleApi.deleteArticle(id);
       message.success('删除成功');
-      fetchArticles();
+      fetchArticles(page);
     } catch {
       message.error('删除失败');
     }
@@ -136,6 +141,14 @@ const ArticleList = () => {
         dataSource={articles}
         rowKey="id"
         loading={loading}
+        pagination={{
+          current: page,
+          total: total,
+          pageSize: 10,
+          showSizeChanger: false,
+          showTotal: (total) => `共 ${total} 篇文章`,
+          onChange: (p) => fetchArticles(p),
+        }}
       />
     </div>
   );

@@ -10,7 +10,10 @@ import {
   App,
   Pagination,
   Rate,
-  Badge
+  Badge,
+  Modal,
+  Descriptions,
+  Typography
 } from 'antd';
 import {
   SearchOutlined,
@@ -37,6 +40,7 @@ const DownloadPage = () => {
   const [keyword, setKeyword] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [detailModal, setDetailModal] = useState<DownloadResource | null>(null);
   const pageSize = 12;
 
   useEffect(() => {
@@ -220,6 +224,7 @@ const DownloadPage = () => {
                     key={resource.id}
                     hoverable
                     style={styles.resourceCard}
+                    onClick={() => setDetailModal(resource)}
                     actions={[
                       <Button
                         type="primary"
@@ -312,6 +317,60 @@ const DownloadPage = () => {
           )}
         </div>
       </div>
+
+      {/* 资源详情弹窗 */}
+      <Modal
+        title={detailModal?.title || '资源详情'}
+        open={!!detailModal}
+        onCancel={() => setDetailModal(null)}
+        footer={[
+          <Button key="close" onClick={() => setDetailModal(null)}>关闭</Button>,
+          <Button key="download" type="primary" icon={<DownloadOutlined />}
+            onClick={() => { if (detailModal) handleDownload(detailModal); setDetailModal(null); }}>
+            立即下载
+          </Button>,
+        ]}
+        width={700}
+      >
+        {detailModal && (
+          <div style={{ padding: '12px 0' }}>
+            <div style={{ display: 'flex', gap: 20, marginBottom: 20, alignItems: 'center' }}>
+              <div style={{ fontSize: 48, width: 80, height: 80, background: '#f5f5f5', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {detailModal.icon || '📄'}
+              </div>
+              <div>
+                <Typography.Title level={4} style={{ margin: 0 }}>{detailModal.title}</Typography.Title>
+                <Space style={{ marginTop: 8 }}>
+                  {detailModal.categoryName && <Tag color="blue">{detailModal.categoryName}</Tag>}
+                  {detailModal.fileType && <Tag color="orange">{detailModal.fileType}</Tag>}
+                  <Tag color={detailModal.isFree ? 'success' : 'red'}>
+                    {detailModal.isFree ? '免费' : `¥${detailModal.price}`}
+                  </Tag>
+                </Space>
+              </div>
+            </div>
+            <Descriptions column={2} size="small" bordered>
+              <Descriptions.Item label="文件大小">{detailModal.fileSize || '未知'}</Descriptions.Item>
+              <Descriptions.Item label="文件类型">{detailModal.fileType || '未知'}</Descriptions.Item>
+              <Descriptions.Item label="下载次数">{detailModal.downloadCount?.toLocaleString()}</Descriptions.Item>
+              <Descriptions.Item label="浏览次数">{detailModal.views?.toLocaleString()}</Descriptions.Item>
+              <Descriptions.Item label="评分">
+                <Rate disabled allowHalf value={detailModal.rating} style={{ fontSize: 14 }} />
+                <span style={{ marginLeft: 8, color: '#999', fontSize: 12 }}>({detailModal.ratingCount}人评价)</span>
+              </Descriptions.Item>
+              <Descriptions.Item label="链接">{detailModal.fileUrl}</Descriptions.Item>
+            </Descriptions>
+            {detailModal.description && (
+              <div style={{ marginTop: 16 }}>
+                <Typography.Title level={5}>资源简介</Typography.Title>
+                <Typography.Paragraph style={{ color: '#666', lineHeight: 1.8 }}>
+                  {detailModal.description}
+                </Typography.Paragraph>
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import { Table, Button, Modal, Form, Input, message } from 'antd';
+import { Table, Button, Modal, Form, Input, App } from 'antd';
 import { useEffect, useState } from 'react';
 import { ColumnType } from 'antd/es/table';
 import { Tag } from '@/types';
@@ -6,6 +6,7 @@ import { tagApi } from '@/api/tag';
 import dayjs from 'dayjs';
 
 const TagList = () => {
+  const { message } = App.useApp();
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);

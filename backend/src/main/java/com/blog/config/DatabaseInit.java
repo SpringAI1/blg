@@ -26,7 +26,6 @@ public class DatabaseInit implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-        // 检查是否需要初始化
         try {
             Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM article", Integer.class);
             if (count != null && count > 0) {
@@ -37,9 +36,12 @@ public class DatabaseInit implements CommandLineRunner {
             System.out.println("开始初始化数据库...");
         }
 
-        // 执行统一的 schema.sql（包含表结构和初始数据）
+        String url = env.getProperty("spring.datasource.url", "");
+        boolean isH2 = url.contains("h2");
+        String schemaFile = isH2 ? "schema-h2.sql" : "schema.sql";
+
         try {
-            ClassPathResource schemaResource = new ClassPathResource("schema.sql");
+            ClassPathResource schemaResource = new ClassPathResource(schemaFile);
             if (schemaResource.exists()) {
                 String sql = FileCopyUtils.copyToString(new InputStreamReader(schemaResource.getInputStream(), StandardCharsets.UTF_8));
                 List<String> statements = parseSqlStatements(sql);

@@ -1,4 +1,4 @@
-import { Table, Button, Modal, message, Tag } from 'antd';
+import { Table, Button, Modal, Tag, App } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ColumnType } from 'antd/es/table';
@@ -6,6 +6,7 @@ import { commentApi, CommentDTO } from '@/api/comment';
 import dayjs from 'dayjs';
 
 const CommentList = () => {
+  const { message } = App.useApp();
   const [comments, setComments] = useState<CommentDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();

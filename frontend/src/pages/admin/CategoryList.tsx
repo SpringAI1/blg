@@ -1,4 +1,4 @@
-import { Table, Button, Modal, Form, Input, message } from 'antd';
+import { Table, Button, Modal, Form, Input, App } from 'antd';
 import { useEffect, useState } from 'react';
 import { ColumnType } from 'antd/es/table';
 import { Category } from '@/types';
@@ -6,6 +6,7 @@ import { categoryApi } from '@/api/category';
 import dayjs from 'dayjs';
 
 const CategoryList = () => {
+  const { message } = App.useApp();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);

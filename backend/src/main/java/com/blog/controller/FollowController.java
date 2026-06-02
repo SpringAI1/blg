@@ -11,7 +11,9 @@ import com.blog.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -40,9 +42,18 @@ public class FollowController {
             List<Long> followingIds = resultPage.getRecords().stream()
                     .map(Follow::getFollowingId)
                     .collect(Collectors.toList());
-            List<User> users = userRepository.selectBatchIds(followingIds);
+            
+            List<User> allUsers = userRepository.selectBatchIds(followingIds);
+            Map<Long, User> userMap = allUsers.stream()
+                    .collect(Collectors.toMap(User::getId, u -> u));
+            
+            List<User> sortedUsers = followingIds.stream()
+                    .map(userMap::get)
+                    .filter(u -> u != null)
+                    .collect(Collectors.toList());
+            
             Page<User> userPage = new Page<>(pageNum, pageSize, resultPage.getTotal());
-            userPage.setRecords(users);
+            userPage.setRecords(sortedUsers);
             return Result.success(userPage);
         }
 
@@ -67,9 +78,18 @@ public class FollowController {
             List<Long> followerIds = resultPage.getRecords().stream()
                     .map(Follow::getFollowerId)
                     .collect(Collectors.toList());
-            List<User> users = userRepository.selectBatchIds(followerIds);
+            
+            List<User> allUsers = userRepository.selectBatchIds(followerIds);
+            Map<Long, User> userMap = allUsers.stream()
+                    .collect(Collectors.toMap(User::getId, u -> u));
+            
+            List<User> sortedUsers = followerIds.stream()
+                    .map(userMap::get)
+                    .filter(u -> u != null)
+                    .collect(Collectors.toList());
+            
             Page<User> userPage = new Page<>(pageNum, pageSize, resultPage.getTotal());
-            userPage.setRecords(users);
+            userPage.setRecords(sortedUsers);
             return Result.success(userPage);
         }
 
@@ -96,10 +116,18 @@ public class FollowController {
         follow.setFollowerId(userId);
         followRepository.insert(follow);
 
+        // 更新被关注者的 followerCount
         User following = userRepository.selectById(follow.getFollowingId());
         if (following != null) {
             following.setFollowerCount(following.getFollowerCount() == null ? 1 : following.getFollowerCount() + 1);
             userRepository.updateById(following);
+        }
+
+        // 更新关注者的 followingCount
+        User follower = userRepository.selectById(userId);
+        if (follower != null) {
+            follower.setFollowingCount(follower.getFollowingCount() == null ? 1 : follower.getFollowingCount() + 1);
+            userRepository.updateById(follower);
         }
 
         return Result.success("关注成功");
@@ -114,10 +142,18 @@ public class FollowController {
         wrapper.eq(Follow::getFollowerId, userId).eq(Follow::getFollowingId, followingId);
         followRepository.delete(wrapper);
 
+        // 更新被关注者的 followerCount
         User following = userRepository.selectById(followingId);
         if (following != null && following.getFollowerCount() != null && following.getFollowerCount() > 0) {
             following.setFollowerCount(following.getFollowerCount() - 1);
             userRepository.updateById(following);
+        }
+
+        // 更新关注者的 followingCount
+        User follower = userRepository.selectById(userId);
+        if (follower != null && follower.getFollowingCount() != null && follower.getFollowingCount() > 0) {
+            follower.setFollowingCount(follower.getFollowingCount() - 1);
+            userRepository.updateById(follower);
         }
 
         return Result.success("取消关注成功");
