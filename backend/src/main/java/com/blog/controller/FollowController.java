@@ -9,6 +9,7 @@ import com.blog.repository.FollowRepository;
 import com.blog.repository.UserRepository;
 import com.blog.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
@@ -99,18 +100,19 @@ public class FollowController {
     }
 
     @PostMapping
+    @Transactional(rollbackFor = Exception.class)
     public Result<String> follow(@RequestBody Follow follow) {
         Long userId = SecurityUtil.getCurrentUserId();
         if (userId == null) return Result.error(401, "请先登录");
 
         if (userId.equals(follow.getFollowingId())) {
-            return Result.error("不能关注自己");
+            return Result.error(400, "不能关注自己");
         }
 
         LambdaQueryWrapper<Follow> checkWrapper = new LambdaQueryWrapper<>();
         checkWrapper.eq(Follow::getFollowerId, userId).eq(Follow::getFollowingId, follow.getFollowingId());
         if (followRepository.selectCount(checkWrapper) > 0) {
-            return Result.error("已经关注过了");
+            return Result.error(400, "已经关注过了");
         }
 
         follow.setFollowerId(userId);
@@ -134,13 +136,13 @@ public class FollowController {
     }
 
     @DeleteMapping("/{followingId}")
+    @Transactional(rollbackFor = Exception.class)
     public Result<String> unfollow(@PathVariable Long followingId) {
         Long userId = SecurityUtil.getCurrentUserId();
         if (userId == null) return Result.error(401, "请先登录");
 
-        LambdaQueryWrapper<Follow> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Follow::getFollowerId, userId).eq(Follow::getFollowingId, followingId);
-        followRepository.delete(wrapper);
+        // 物理删除（绕过逻辑删除），避免再次关注时 UNIQUE 约束冲突
+        followRepository.deletePhysical(userId, followingId);
 
         // 更新被关注者的 followerCount
         User following = userRepository.selectById(followingId);

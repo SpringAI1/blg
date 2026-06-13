@@ -5,6 +5,7 @@ package-lock.json
 # Build outputs
 dist/
 build/
+*.tsbuildinfo
 
 # IDE
 .idea/
@@ -18,27 +19,41 @@ npm-debug.log*
 # OS
 .DS_Store
 Thumbs.db
+Desktop.ini
 
 # Environment
 .env
 .env.local
 
-# Backend
-target/
+# Backend build
+backend/target/
 *.class
 *.jar
 *.war
 
-# IDE specific files
-*.swp
-*.swo
-*~
+# Uploaded files (user content, not code)
+backend/uploads/
 
-# Maven
+# Maven wrapper (generated)
 .mvn/
 mvnw
 mvnw.cmd
 
-# Credentials
+# Credentials / secrets
 credentials.json
 *.pem
+
+# Database (H2 file-based)
+backend/data/
+*.mv.db
+*.trace.db
+
+# Reasonix / AI agent config
+.reasonix/
+reasonix.toml
+
+# Temp files
+*.swp
+*.swo
+*~
+*.bak

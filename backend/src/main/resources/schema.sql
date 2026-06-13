@@ -12,14 +12,19 @@ USE blog;
 -- =====================================================
 -- 1. 用户表
 -- =====================================================
-DROP TABLE IF EXISTS `follow;
-CREATE TABLE `user` (
+DROP TABLE IF EXISTS `blog_user`;
+CREATE TABLE `blog_user` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
     `username` VARCHAR(50) NOT NULL COMMENT '用户名',
     `password` VARCHAR(255) NOT NULL COMMENT '密码（加密存储）',
     `email` VARCHAR(100) DEFAULT NULL COMMENT '邮箱',
     `avatar` VARCHAR(255) DEFAULT NULL COMMENT '头像URL',
+    `nickname` VARCHAR(50) DEFAULT NULL COMMENT '昵称',
+    `bio` VARCHAR(500) DEFAULT NULL COMMENT '个人简介',
     `role` VARCHAR(20) NOT NULL DEFAULT 'USER' COMMENT '角色：USER用户，ADMIN管理员',
+    `follower_count` INT NOT NULL DEFAULT 0 COMMENT '粉丝数',
+    `following_count` INT NOT NULL DEFAULT 0 COMMENT '关注数',
+    `article_count` INT NOT NULL DEFAULT 0 COMMENT '文章数',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除：0未删除，1已删除',
@@ -158,7 +163,7 @@ CREATE TABLE `download_category` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
     `name` VARCHAR(100) NOT NULL COMMENT '分类名称',
     `description` VARCHAR(255) DEFAULT NULL COMMENT '分类描述',
-    `sort` INT NOT NULL DEFAULT 0 COMMENT '排序',
+    `sort_order` INT NOT NULL DEFAULT 0 COMMENT '排序',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `update_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
     `deleted` TINYINT NOT NULL DEFAULT 0 COMMENT '逻辑删除',
@@ -200,7 +205,7 @@ CREATE TABLE `download_resource` (
 DROP TABLE IF EXISTS `download_record`;
 CREATE TABLE `download_record` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
-    `user_id` BIGINT NOT NULL COMMENT '用户ID',
+    `user_id` BIGINT DEFAULT NULL COMMENT '用户ID',
     `resource_id` BIGINT NOT NULL COMMENT '资源ID',
     `ip_address` VARCHAR(50) DEFAULT NULL COMMENT 'IP地址',
     `user_agent` VARCHAR(500) DEFAULT NULL COMMENT '用户代理',
@@ -215,12 +220,12 @@ CREATE TABLE `download_record` (
 -- =====================================================
 
 -- 插入测试用户（密码都是 123456，使用BCrypt加密）
-INSERT INTO `user` (`username`, `password`, `email`, `avatar`, `role`) VALUES
-('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'admin@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', 'ADMIN'),
-('zhangwei', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'zhangwei@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=zhangwei', 'USER'),
-('lina', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'lina@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=lina', 'USER'),
-('wanghao', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'wanghao@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=wanghao', 'USER'),
-('chenli', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'chenli@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=chenli', 'USER');
+INSERT INTO `blog_user` (`username`, `password`, `email`, `avatar`, `nickname`, `role`) VALUES
+('admin', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'admin@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=admin', '管理员', 'ADMIN'),
+('zhangwei', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'zhangwei@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=zhangwei', '张伟', 'USER'),
+('lina', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'lina@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=lina', '李娜', 'USER'),
+('wanghao', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'wanghao@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=wanghao', '王浩', 'USER'),
+('chenli', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM8lE9lBOsl7iAt6Z5EH', 'chenli@blog.com', 'https://api.dicebear.com/7.x/avataaars/svg?seed=chenli', '陈丽', 'USER');
 
 -- 插入分类数据
 INSERT INTO `category` (`name`, `slug`, `description`) VALUES
@@ -244,7 +249,7 @@ INSERT INTO `tag` (`name`) VALUES
 ('微服务');
 
 -- 插入下载分类
-INSERT INTO `download_category` (`name`, `description`, `sort`) VALUES
+INSERT INTO `download_category` (`name`, `description`, `sort_order`) VALUES
 ('开发工具', '开发相关的开发工具', 1),
 ('代码模板', '常用的代码模板', 2),
 ('学习资料', '学习相关的学习资料', 3),

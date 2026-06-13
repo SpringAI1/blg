@@ -35,6 +35,21 @@ public class ArticleController {
         return Result.success(articleService.getPublishedArticles(pageNum, pageSize, categoryId, tagId, keyword));
     }
 
+    @GetMapping("/all")
+    public Result<Page<ArticleDTO>> getAllArticles(
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        // 管理员可见所有文章，其他用户只可见自己的
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) return Result.error(401, "请先登录");
+
+        String role = SecurityUtil.getCurrentUser() != null ? SecurityUtil.getCurrentUser().getRole() : "";
+        if ("ADMIN".equals(role)) {
+            return Result.success(articleService.getAllArticles(pageNum, pageSize));
+        }
+        return Result.success(articleService.getArticlesByUser(userId, pageNum, pageSize));
+    }
+
     @GetMapping("/published/{id}")
     public Result<ArticleDTO> getPublishedArticle(@PathVariable Long id) {
         ArticleDTO article = articleService.getPublishedArticle(id);
@@ -74,19 +89,34 @@ public class ArticleController {
             article.setSummary((String) requestBody.get("summary"));
             article.setCoverImage((String) requestBody.get("coverImage"));
             
+            // 安全地转换 categoryId
             Object categoryIdObj = requestBody.get("categoryId");
             if (categoryIdObj != null) {
-                article.setCategoryId(Long.valueOf(categoryIdObj.toString()));
+                try {
+                    article.setCategoryId(Long.valueOf(categoryIdObj.toString()));
+                } catch (NumberFormatException e) {
+                    return Result.error(400, "分类ID格式无效");
+                }
             }
             
             article.setStatus(requestBody.get("status") != null ? (String) requestBody.get("status") : "PUBLISHED");
             article.setUserId(userId);
 
-            @SuppressWarnings("unchecked")
-            List<Long> tagIds = requestBody.get("tagIds") != null ? 
-                ((List<?>) requestBody.get("tagIds")).stream()
-                    .map(obj -> Long.valueOf(obj.toString()))
-                    .collect(java.util.stream.Collectors.toList()) : null;
+            // 安全地转换 tagIds
+            Object tagIdsRaw = requestBody.get("tagIds");
+            List<Long> tagIds = null;
+            if (tagIdsRaw instanceof List<?>) {
+                tagIds = ((List<?>) tagIdsRaw).stream()
+                    .map(obj -> {
+                        try {
+                            return Long.valueOf(obj.toString());
+                        } catch (NumberFormatException e) {
+                            return null;
+                        }
+                    })
+                    .filter(java.util.Objects::nonNull)
+                    .collect(java.util.stream.Collectors.toList());
+            }
 
             return Result.success(articleService.createArticle(article, tagIds));
         } catch (Exception e) {
@@ -115,18 +145,37 @@ public class ArticleController {
         }
 
         Article article = new Article();
+        article.setId(id);
         article.setTitle((String) requestBody.get("title"));
         article.setContent((String) requestBody.get("content"));
         article.setSummary((String) requestBody.get("summary"));
         article.setCoverImage((String) requestBody.get("coverImage"));
-        article.setCategoryId(requestBody.get("categoryId") != null ? Long.valueOf(requestBody.get("categoryId").toString()) : null);
+        
+        Object categoryIdObj = requestBody.get("categoryId");
+        if (categoryIdObj != null) {
+            try {
+                article.setCategoryId(Long.valueOf(categoryIdObj.toString()));
+            } catch (NumberFormatException e) {
+                return Result.error(400, "分类ID格式无效");
+            }
+        }
+        
         article.setStatus(requestBody.get("status") != null ? (String) requestBody.get("status") : "PUBLISHED");
 
-        @SuppressWarnings("unchecked")
-        List<Long> tagIds = requestBody.get("tagIds") != null ? 
-            ((List<?>) requestBody.get("tagIds")).stream()
-                .map(obj -> Long.valueOf(obj.toString()))
-                .collect(java.util.stream.Collectors.toList()) : null;
+        Object tagIdsRaw = requestBody.get("tagIds");
+        List<Long> tagIds = null;
+        if (tagIdsRaw instanceof List<?>) {
+            tagIds = ((List<?>) tagIdsRaw).stream()
+                .map(obj -> {
+                    try {
+                        return Long.valueOf(obj.toString());
+                    } catch (NumberFormatException e) {
+                        return null;
+                    }
+                })
+                .filter(java.util.Objects::nonNull)
+                .collect(java.util.stream.Collectors.toList());
+        }
 
         return Result.success(articleService.updateArticle(id, article, tagIds));
     }

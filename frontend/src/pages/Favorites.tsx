@@ -1,28 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Card, List, Typography, Empty, Spin, Button, Space, App, Tabs, Pagination } from 'antd';
-import { LikeOutlined, EyeOutlined, DeleteOutlined, StarFilled, TeamOutlined, MessageOutlined } from '@ant-design/icons';
+import { Card, List, Typography, Empty, Spin, Button, Space, App, Pagination } from 'antd';
+import { LikeOutlined, EyeOutlined, DeleteOutlined, StarFilled, MessageOutlined, ClockCircleOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import { favoriteApi } from '@/api/favorite';
-import { followApi } from '@/api/follow';
 import { useAuthStore } from '@/store/auth';
 import { Article } from '@/types';
+import dayjs from 'dayjs';
 
 const { Title, Text } = Typography;
 
-interface FollowUser {
-  id: number;
-  username: string;
-  nickname?: string;
-  avatar?: string;
-  bio?: string;
-  followerCount?: number;
-  followingCount?: number;
-  articleCount?: number;
-}
-
 const Favorites = () => {
   const [favorites, setFavorites] = useState<Article[]>([]);
-  const [followings, setFollowings] = useState<FollowUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [favTotal, setFavTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -32,7 +20,6 @@ const Favorites = () => {
   useEffect(() => {
     if (isAuthenticated) {
       fetchFavorites(1);
-      fetchFollowings();
     } else {
       setLoading(false);
     }
@@ -46,18 +33,8 @@ const Favorites = () => {
       setFavTotal(res?.total || 0);
       setPage(pageNum);
     } catch (error) {
-      console.error('获取收藏失败:', error);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const fetchFollowings = async () => {
-    try {
-      const res = await followApi.getMyFollowing(1, 50);
-      setFollowings(res?.records || []);
-    } catch (error) {
-      console.error('获取关注失败:', error);
     }
   };
 
@@ -71,40 +48,42 @@ const Favorites = () => {
     }
   };
 
-  const handleUnfollow = async (userId: number) => {
-    try {
-      await followApi.unfollow(userId);
-      message.success('取消关注成功');
-      fetchFollowings();
-    } catch (error) {
-      message.error('取消关注失败');
-    }
-  };
-
   if (!isAuthenticated) {
     return (
-      <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 0' }}>
-        <Card>
+      <div className="page-container">
+        <Card style={{ borderRadius: 12 }}>
           <div style={{ textAlign: 'center', padding: 48 }}>
-            <Text type="secondary">请先登录后查看收藏与关注</Text>
+            <StarFilled style={{ fontSize: 48, color: '#ddd', marginBottom: 16 }} />
+            <Text type="secondary" style={{ fontSize: 16, display: 'block' }}>请先登录后查看收藏</Text>
           </div>
         </Card>
       </div>
     );
   }
 
-  const tabItems = [
-    {
-      key: 'favorites',
-      label: <span><StarFilled /> 收藏 ({favTotal})</span>,
-      children: (
-        <>
+  return (
+    <div className="fade-in-up">
+      <div className="page-header">
+        <Title level={2} style={{ margin: 0, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <StarFilled style={{ color: '#faad14' }} />
+          我的收藏
+        </Title>
+      </div>
+
+      <Card style={{ borderRadius: 12, border: '1px solid var(--color-border-light)' }}>
+        <Spin spinning={loading}>
           <List
             dataSource={favorites}
-            loading={loading}
-            locale={{ emptyText: <Empty description="暂无收藏文章，去博客页面发现感兴趣的文章吧" /> }}
+            locale={{ emptyText: (
+              <div style={{ padding: 48 }}>
+                <StarFilled style={{ fontSize: 48, color: '#eee', display: 'block', marginBottom: 16 }} />
+                <Empty description="暂无收藏文章" />
+                <Text type="secondary">去博客页面发现感兴趣的文章吧</Text>
+              </div>
+            )}}
             renderItem={(article) => (
               <List.Item
+                style={{ padding: '16px 0', borderBottom: '1px solid #f0f0f0' }}
                 actions={[
                   <Button 
                     type="text" 
@@ -112,14 +91,15 @@ const Favorites = () => {
                     icon={<DeleteOutlined />} 
                     onClick={() => handleRemoveFavorite(article.id)}
                     key="remove"
+                    style={{ borderRadius: 6 }}
                   >
                     取消收藏
-                  </Button>
+                  </Button>,
                 ]}
               >
                 <List.Item.Meta
                   title={
-                    <Link to={`/article/${article.id}`} style={{ fontSize: '16px', fontWeight: 500, color: '#1a1a1a' }}>
+                    <Link to={`/article/${article.id}`} style={{ fontSize: 16, fontWeight: 600, color: 'var(--color-text-primary)' }}>
                       {article.title}
                     </Link>
                   }
@@ -128,17 +108,21 @@ const Favorites = () => {
                       <Text type="secondary" ellipsis style={{ maxWidth: 400 }}>
                         {article.summary || '暂无摘要'}
                       </Text>
-                      <Text type="secondary">
+                      <Text type="secondary" style={{ fontSize: 12 }}>
                         <EyeOutlined style={{ marginRight: 4 }} />
                         {article.views || 0}
                       </Text>
-                      <Text type="secondary">
+                      <Text type="secondary" style={{ fontSize: 12 }}>
                         <LikeOutlined style={{ marginRight: 4 }} />
                         {article.likes || 0}
                       </Text>
-                      <Text type="secondary">
+                      <Text type="secondary" style={{ fontSize: 12 }}>
                         <MessageOutlined style={{ marginRight: 4 }} />
                         {article.commentCount || 0}
+                      </Text>
+                      <Text type="secondary" style={{ fontSize: 12 }}>
+                        <ClockCircleOutlined style={{ marginRight: 4 }} />
+                        {article.createTime ? dayjs(article.createTime).format('MM-DD') : ''}
                       </Text>
                     </Space>
                   }
@@ -147,7 +131,7 @@ const Favorites = () => {
             )}
           />
           {favTotal > 10 && (
-            <div style={{ textAlign: 'center', marginTop: 16 }}>
+            <div style={{ textAlign: 'center', marginTop: 20 }}>
               <Pagination
                 current={page}
                 total={favTotal}
@@ -157,58 +141,7 @@ const Favorites = () => {
               />
             </div>
           )}
-        </>
-      ),
-    },
-    {
-      key: 'following',
-      label: <span><TeamOutlined /> 关注 ({followings.length})</span>,
-      children: (
-        <List
-          dataSource={followings}
-          loading={loading}
-          locale={{ emptyText: <Empty description="暂无关注用户" /> }}
-          renderItem={(user) => (
-            <List.Item
-              actions={[
-                <Button 
-                  key="unfollow" 
-                  danger 
-                  size="small" 
-                  onClick={() => handleUnfollow(user.id)}
-                >
-                  取消关注
-                </Button>
-              ]}
-            >
-              <List.Item.Meta
-                avatar={
-                  <img
-                    src={user.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'}
-                    style={{ width: 48, height: 48, borderRadius: '50%' }}
-                    alt=""
-                  />
-                }
-                title={user.nickname || user.username}
-                description={
-                  <Space>
-                    <Text type="secondary">{user.articleCount || 0} 文章</Text>
-                    <Text type="secondary">{user.followerCount || 0} 粉丝</Text>
-                  </Space>
-                }
-              />
-            </List.Item>
-          )}
-        />
-      ),
-    },
-  ];
-
-  return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '24px 0' }}>
-      <Title level={2} style={{ marginBottom: 24 }}>我的收藏与关注</Title>
-      <Card>
-        <Tabs items={tabItems} defaultActiveKey="favorites" />
+        </Spin>
       </Card>
     </div>
   );

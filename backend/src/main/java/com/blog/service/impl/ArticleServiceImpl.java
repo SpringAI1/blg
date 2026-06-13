@@ -24,6 +24,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -78,8 +79,27 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
             wrapper.eq(Article::getCategoryId, categoryId);
         }
 
+        if (tagId != null) {
+            List<ArticleTag> articleTags = articleTagRepository.selectList(new LambdaQueryWrapper<ArticleTag>()
+                .eq(ArticleTag::getTagId, tagId));
+            List<Long> articleIds = articleTags.stream()
+                .map(ArticleTag::getArticleId)
+                .collect(Collectors.toList());
+            if (articleIds.isEmpty()) {
+                Page<ArticleDTO> emptyPage = new Page<>(pageNum, pageSize, 0);
+                emptyPage.setRecords(Collections.emptyList());
+                cacheService.set(cacheKey, emptyPage, ARTICLE_CACHE_MINUTES, TimeUnit.MINUTES);
+                return emptyPage;
+            }
+            wrapper.in(Article::getId, articleIds);
+        }
+
         if (keyword != null && !keyword.isEmpty()) {
-            wrapper.like(Article::getTitle, keyword);
+            wrapper.and(w -> w.like(Article::getTitle, keyword)
+                .or()
+                .like(Article::getContent, keyword)
+                .or()
+                .like(Article::getSummary, keyword));
         }
 
         wrapper.orderByDesc(Article::getCreateTime);
@@ -93,6 +113,17 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
 
         cacheService.set(cacheKey, dtoPage, ARTICLE_CACHE_MINUTES, TimeUnit.MINUTES);
 
+        return dtoPage;
+    }
+
+    @Override
+    public Page<ArticleDTO> getAllArticles(int pageNum, int pageSize) {
+        Page<Article> articlePage = baseMapper.selectPage(
+            new Page<>(pageNum, pageSize),
+            new LambdaQueryWrapper<Article>().orderByDesc(Article::getCreateTime)
+        );
+        Page<ArticleDTO> dtoPage = new Page<>(articlePage.getCurrent(), articlePage.getSize(), articlePage.getTotal());
+        dtoPage.setRecords(articlePage.getRecords().stream().map(this::convertToDTO).collect(Collectors.toList()));
         return dtoPage;
     }
 
@@ -155,6 +186,12 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
         article.setIsTop(false);
         baseMapper.insert(article);
 
+        User author = userRepository.selectById(article.getUserId());
+        if (author != null) {
+            author.setArticleCount((author.getArticleCount() == null ? 0 : author.getArticleCount()) + 1);
+            userRepository.updateById(author);
+        }
+
         if (tagIds != null && !tagIds.isEmpty()) {
             for (Long tagId : tagIds) {
                 ArticleTag articleTag = new ArticleTag();
@@ -206,9 +243,18 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
     @Override
     @Transactional
     public void deleteArticle(Long id) {
+        Article article = baseMapper.selectById(id);
         articleTagRepository.delete(new LambdaQueryWrapper<ArticleTag>()
             .eq(ArticleTag::getArticleId, id));
         baseMapper.deleteById(id);
+
+        if (article != null) {
+            User author = userRepository.selectById(article.getUserId());
+            if (author != null) {
+                author.setArticleCount(Math.max(0, (author.getArticleCount() == null ? 0 : author.getArticleCount()) - 1));
+                userRepository.updateById(author);
+            }
+        }
 
         cacheService.delete(ARTICLE_KEY + id);
         cacheService.deleteByPattern(ARTICLE_LIST_KEY + "*");
@@ -218,7 +264,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
     public void increaseViews(Long id) {
         Article article = baseMapper.selectById(id);
         if (article != null) {
-            article.setViews(article.getViews() + 1);
+            article.setViews((article.getViews() == null ? 0 : article.getViews()) + 1);
             baseMapper.updateById(article);
 
             cacheService.delete(ARTICLE_KEY + id);
@@ -243,14 +289,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
         if (articleLikeRepository.selectCount(likeCheck) > 0) {
             // 已点赞 → 取消点赞
             articleLikeRepository.delete(likeCheck);
-            article.setLikes(Math.max(0, article.getLikes() - 1));
+            article.setLikes(Math.max(0, (article.getLikes() == null ? 0 : article.getLikes()) - 1));
         } else {
             // 未点赞 → 点赞
             ArticleLike like = new ArticleLike();
             like.setArticleId(id);
             like.setUserId(userId);
             articleLikeRepository.insert(like);
-            article.setLikes(article.getLikes() + 1);
+            article.setLikes((article.getLikes() == null ? 0 : article.getLikes()) + 1);
         }
 
         baseMapper.updateById(article);

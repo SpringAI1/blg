@@ -17,7 +17,11 @@ public class UserController {
 
     @GetMapping("/{id}")
     public Result<UserDTO> getUser(@PathVariable Long id) {
-        return Result.success(userService.getUserById(id));
+        UserDTO user = userService.getUserById(id);
+        if (user == null) {
+            return Result.error(404, "用户不存在");
+        }
+        return Result.success(user);
     }
 
     @GetMapping("/me")
@@ -35,7 +39,7 @@ public class UserController {
         if (userId == null) {
             return Result.error(401, "请先登录");
         }
-        userService.updateProfile(userId, user.getEmail(), user.getAvatar(), user.getPassword());
+        userService.updateProfile(userId, user.getEmail(), user.getAvatar(), user.getPassword(), user.getNickname(), user.getBio());
         return Result.success(userService.getUserById(userId));
     }
 }

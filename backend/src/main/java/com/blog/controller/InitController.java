@@ -27,7 +27,7 @@ public class InitController {
             String[] tables = {
                 "download_record", "download_resource", "download_category",
                 "follow", "favorite", "comment", "article_tag",
-                "article", "tag", "category", "user"
+                "article", "tag", "category", "blog_user"
             };
             
             for (String table : tables) {
@@ -54,7 +54,7 @@ public class InitController {
         Map<String, Object> result = new HashMap<>();
         try {
             // 读取并执行SQL脚本
-            ClassPathResource resource = new ClassPathResource("db-schema.sql");
+            ClassPathResource resource = new ClassPathResource("schema-h2.sql");
             if (resource.exists()) {
                 String sql = FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8));
                 List<String> statements = parseSqlStatements(sql);

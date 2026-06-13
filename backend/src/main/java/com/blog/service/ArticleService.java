@@ -11,6 +11,8 @@ public interface ArticleService extends IService<Article> {
 
     Page<ArticleDTO> getPublishedArticles(int pageNum, int pageSize, Long categoryId, Long tagId, String keyword);
 
+    Page<ArticleDTO> getAllArticles(int pageNum, int pageSize);
+
     ArticleDTO getPublishedArticle(Long id);
 
     Page<ArticleDTO> getArticlesByUser(Long userId, int pageNum, int pageSize);

@@ -47,10 +47,10 @@ public class DownloadServiceImpl extends ServiceImpl<DownloadResourceRepository,
     }
 
     @Override
-    public Page<DownloadResourceDTO> getResources(int pageNum, int pageSize, Long categoryId, String keyword) {
+    public Page<DownloadResourceDTO> getResources(int pageNum, int pageSize, Long categoryId, String keyword, String sort) {
         String cacheKey = RESOURCE_LIST_KEY + pageNum + ":" + pageSize + ":" +
                          (categoryId != null ? categoryId : "all") + ":" +
-                         (keyword != null ? keyword : "none");
+                         (keyword != null ? keyword : "none") + ":" + sort;
 
         Page<DownloadResourceDTO> cached = cacheService.get(cacheKey, Page.class);
         if (cached != null) {
@@ -72,7 +72,22 @@ public class DownloadServiceImpl extends ServiceImpl<DownloadResourceRepository,
                 .like(DownloadResource::getDescription, keyword));
         }
 
-        wrapper.orderByDesc(DownloadResource::getCreateTime);
+        // 排序
+        switch (sort) {
+            case "downloads":
+                wrapper.orderByDesc(DownloadResource::getDownloadCount);
+                break;
+            case "rating":
+                wrapper.orderByDesc(DownloadResource::getRating);
+                break;
+            case "views":
+                wrapper.orderByDesc(DownloadResource::getViews);
+                break;
+            case "latest":
+            default:
+                wrapper.orderByDesc(DownloadResource::getCreateTime);
+                break;
+        }
 
         Page<DownloadResource> resourcePage = baseMapper.selectPage(page, wrapper);
 

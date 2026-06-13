@@ -8,6 +8,6 @@ export const userApi = {
   getCurrentUser: () =>
     apiGet<User>('/users/me'),
 
-  updateProfile: (data: { email?: string; avatar?: string; password?: string }) =>
+  updateProfile: (data: { nickname?: string; bio?: string; email?: string; avatar?: string; password?: string }) =>
     apiPut<User>('/users/profile', data),
 };

@@ -59,12 +59,17 @@ public class UserServiceImpl extends ServiceImpl<UserRepository, User> implement
         user.setPassword(passwordEncoder.encode(password));
         user.setEmail(email);
         user.setRole("USER");
+        user.setNickname(username);
+        user.setCoins(0);
+        user.setFollowerCount(0);
+        user.setFollowingCount(0);
+        user.setArticleCount(0);
         baseMapper.insert(user);
         return user;
     }
 
     @Override
-    public void updateProfile(Long userId, String email, String avatar, String password) {
+    public void updateProfile(Long userId, String email, String avatar, String password, String nickname, String bio) {
         User user = baseMapper.selectById(userId);
         if (user == null) {
             throw new RuntimeException("用户不存在");
@@ -75,6 +80,12 @@ public class UserServiceImpl extends ServiceImpl<UserRepository, User> implement
         }
         if (avatar != null) {
             user.setAvatar(avatar);
+        }
+        if (nickname != null) {
+            user.setNickname(nickname);
+        }
+        if (bio != null) {
+            user.setBio(bio);
         }
         if (password != null && !password.isEmpty()) {
             user.setPassword(passwordEncoder.encode(password));

@@ -1,7 +1,7 @@
 import { Form, Input, Select, Button, Card, Spin, App, Upload, Image } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { articleApi } from '@/api/article';
 import { categoryApi } from '@/api/category';
 import { tagApi } from '@/api/tag';
@@ -17,21 +17,17 @@ const ArticleEditor = () => {
   const [form] = Form.useForm();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const location = useLocation();
+  const isCreatorRoute = location.pathname.startsWith('/creator');
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
   const [tags, setTags] = useState<TagType[]>([]);
   const [initialLoading, setInitialLoading] = useState(!!id);
   const [coverImageUrl, setCoverImageUrl] = useState<string>('');
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, token } = useAuthStore();
 
   useEffect(() => {
-    if (!isAuthenticated) {
-      message.warning('请先登录');
-      navigate('/login');
-      return;
-    }
-
     const fetchData = async () => {
       try {
         const [cats, tgs] = await Promise.all([
@@ -57,14 +53,13 @@ const ArticleEditor = () => {
           }
         }
       } catch (err: any) {
-        console.error('加载数据失败:', err);
         message.error('加载数据失败: ' + (err.message || '未知错误'));
       } finally {
         setInitialLoading(false);
       }
     };
     fetchData();
-  }, [id, form, isAuthenticated, navigate, message]);
+  }, [id, form, navigate, message]);
 
   const handleImageUpload = async (file: File) => {
     setUploading(true);
@@ -76,7 +71,6 @@ const ArticleEditor = () => {
         message.success('图片上传成功');
       }
     } catch (err: any) {
-      console.error('上传失败:', err);
       message.error('图片上传失败: ' + (err.message || '未知错误'));
     } finally {
       setUploading(false);
@@ -95,14 +89,14 @@ const ArticleEditor = () => {
     try {
       if (id) {
         await articleApi.updateArticle(Number(id), values);
-        message.success('文章更新成功');
+        message.success('文章更新成功！');
+        navigate(isCreatorRoute ? `/article/${id}` : '/admin/articles');
       } else {
-        await articleApi.createArticle(values);
-        message.success('文章创建成功');
+        const result = await articleApi.createArticle(values);
+        message.success('文章创建成功！');
+        navigate(isCreatorRoute ? (result?.id ? `/article/${result.id}` : '/blog') : '/admin/articles');
       }
-      navigate('/admin/articles');
     } catch (err: any) {
-      console.error('保存文章失败:', err);
       message.error('保存文章失败: ' + (err.message || '未知错误'));
     } finally {
       setLoading(false);
@@ -229,7 +223,7 @@ const ArticleEditor = () => {
             </Button>
             <Button
               style={{ marginLeft: 8 }}
-              onClick={() => navigate('/admin/articles')}
+              onClick={() => navigate(isCreatorRoute ? '/blog' : '/admin/articles')}
             >
               取消
             </Button>

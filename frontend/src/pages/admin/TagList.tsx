@@ -1,4 +1,4 @@
-import { Table, Button, Modal, Form, Input, App } from 'antd';
+import { Table, Button, Modal, Form, Input, App, Card } from 'antd';
 import { useEffect, useState } from 'react';
 import { ColumnType } from 'antd/es/table';
 import { Tag } from '@/types';
@@ -84,19 +84,25 @@ const TagList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <h1 style={{ display: 'inline-block', marginRight: 16 }}>标签管理</h1>
-        <Button type="primary" onClick={() => setModalVisible(true)}>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ margin: 0, fontWeight: 700, fontSize: 20 }}>标签管理</h2>
+          <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>管理文章标签</span>
+        </div>
+        <Button type="primary" onClick={() => setModalVisible(true)} style={{ borderRadius: 8, fontWeight: 500 }}>
           新建标签
         </Button>
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={tags}
-        rowKey="id"
-        loading={loading}
-      />
+      <Card style={{ borderRadius: 12, border: '1px solid var(--color-border-light)' }}>
+        <Table
+          columns={columns}
+          dataSource={tags}
+          rowKey="id"
+          loading={loading}
+          pagination={false}
+        />
+      </Card>
 
       <Modal
         title="新建标签"

@@ -1,4 +1,4 @@
-import { Table, Button, Tag, App } from 'antd';
+import { Table, Button, Tag, App, Card } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ColumnType } from 'antd/es/table';
@@ -127,29 +127,35 @@ const ArticleList = () => {
 
   return (
     <div>
-      <div style={{ marginBottom: 16 }}>
-        <h1 style={{ display: 'inline-block', marginRight: 16 }}>文章管理</h1>
+      <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <div>
+          <h2 style={{ margin: 0, fontWeight: 700, fontSize: 20 }}>文章管理</h2>
+          <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13 }}>管理所有文章</span>
+        </div>
         <Button
           type="primary"
           onClick={() => navigate('/admin/articles/new')}
+          style={{ borderRadius: 8, fontWeight: 500 }}
         >
           新建文章
         </Button>
       </div>
-      <Table
-        columns={columns}
-        dataSource={articles}
-        rowKey="id"
-        loading={loading}
-        pagination={{
-          current: page,
-          total: total,
-          pageSize: 10,
-          showSizeChanger: false,
-          showTotal: (total) => `共 ${total} 篇文章`,
-          onChange: (p) => fetchArticles(p),
-        }}
-      />
+      <Card style={{ borderRadius: 12, border: '1px solid var(--color-border-light)' }}>
+        <Table
+          columns={columns}
+          dataSource={articles}
+          rowKey="id"
+          loading={loading}
+          pagination={{
+            current: page,
+            total: total,
+            pageSize: 10,
+            showSizeChanger: false,
+            showTotal: (total) => `共 ${total} 篇文章`,
+            onChange: (p) => fetchArticles(p),
+          }}
+        />
+      </Card>
     </div>
   );
 };

@@ -9,6 +9,7 @@ import com.blog.repository.ArticleRepository;
 import com.blog.repository.FavoriteRepository;
 import com.blog.util.SecurityUtil;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -53,6 +54,7 @@ public class FavoriteController {
     }
 
     @PostMapping
+    @Transactional(rollbackFor = Exception.class)
     public Result<String> addFavorite(@RequestBody Favorite favorite) {
         Long userId = SecurityUtil.getCurrentUserId();
         if (userId == null) return Result.error(401, "请先登录");
@@ -60,7 +62,7 @@ public class FavoriteController {
         LambdaQueryWrapper<Favorite> checkWrapper = new LambdaQueryWrapper<>();
         checkWrapper.eq(Favorite::getUserId, userId).eq(Favorite::getArticleId, favorite.getArticleId());
         if (favoriteRepository.selectCount(checkWrapper) > 0) {
-            return Result.error("已经收藏过了");
+            return Result.error(400, "已经收藏过了");
         }
 
         favorite.setUserId(userId);
@@ -76,13 +78,13 @@ public class FavoriteController {
     }
 
     @DeleteMapping("/{articleId}")
+    @Transactional(rollbackFor = Exception.class)
     public Result<String> removeFavorite(@PathVariable Long articleId) {
         Long userId = SecurityUtil.getCurrentUserId();
         if (userId == null) return Result.error(401, "请先登录");
 
-        LambdaQueryWrapper<Favorite> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Favorite::getUserId, userId).eq(Favorite::getArticleId, articleId);
-        favoriteRepository.delete(wrapper);
+        // 物理删除（绕过逻辑删除），避免再次收藏时 UNIQUE 约束冲突
+        favoriteRepository.deletePhysical(userId, articleId);
 
         Article article = articleRepository.selectById(articleId);
         if (article != null && article.getFavoriteCount() != null && article.getFavoriteCount() > 0) {

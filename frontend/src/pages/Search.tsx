@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Card, List, Typography, Button, Input, Space, Tag, App, Spin, Empty, Divider } from 'antd';
-import { SearchOutlined, RobotOutlined, FileTextOutlined, DownloadOutlined } from '@ant-design/icons';
-import { useNavigate, Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Card, List, Typography, Button, Input, Space, Tag, App, Spin, Empty, Divider, Avatar } from 'antd';
+import { SearchOutlined, RobotOutlined, FileTextOutlined, DownloadOutlined, UserOutlined, TagOutlined } from '@ant-design/icons';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { searchApi } from '@/api/search';
 import dayjs from 'dayjs';
 
@@ -28,17 +28,28 @@ interface ResourceResult {
   createTime: string;
 }
 
+interface SearchResultData {
+  articles: ArticleResult[];
+  resources: ResourceResult[];
+  articleTotal: number;
+  resourceTotal: number;
+}
+
 const Search = () => {
   const { message } = App.useApp();
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(false);
   const [articles, setArticles] = useState<ArticleResult[]>([]);
   const [resources, setResources] = useState<ResourceResult[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [tags, setTags] = useState<any[]>([]);
   const [hasSearched, setHasSearched] = useState(false);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const handleSearch = async () => {
-    if (!query.trim()) {
+  const runSearch = async (keyword: string) => {
+    const trimmedKeyword = keyword.trim();
+    if (!trimmedKeyword) {
       message.warning('请输入搜索关键词');
       return;
     }
@@ -47,21 +58,35 @@ const Search = () => {
     setHasSearched(true);
 
     try {
-      const response = await searchApi.searchAll(query);
+      const response = await searchApi.searchAll(trimmedKeyword);
       setArticles(response?.articles || []);
       setResources(response?.resources || []);
-      
-      if ((response?.articles?.length || 0) === 0 && (response?.resources?.length || 0) === 0) {
+      setUsers(response?.users || []);
+      setTags(response?.tags || []);
+
+      if ((response?.articles?.length || 0) === 0 && (response?.resources?.length || 0) === 0 &&
+          (response?.users?.length || 0) === 0 && (response?.tags?.length || 0) === 0) {
         message.info('未找到相关内容');
       }
     } catch (error) {
-      console.error('Search failed:', error);
       message.error('搜索失败，请稍后重试');
       setArticles([]);
       setResources([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  useEffect(() => {
+    const keyword = searchParams.get('keyword') || searchParams.get('q') || '';
+    if (keyword) {
+      setQuery(keyword);
+      runSearch(keyword);
+    }
+  }, [searchParams]);
+
+  const handleSearch = async () => {
+    await runSearch(query);
   };
 
   const handleBaiduSearch = () => {
@@ -117,7 +142,7 @@ const Search = () => {
                 style={{ cursor: 'pointer', padding: '4px 12px' }}
                 onClick={() => {
                   setQuery(keyword);
-                  setTimeout(() => handleSearch(), 0);
+                  runSearch(keyword);
                 }}
               >
                 {keyword}
@@ -130,9 +155,9 @@ const Search = () => {
       <div style={styles.resultsSection}>
         {loading ? (
           <div style={{ textAlign: 'center', padding: 50 }}>
-            <Spin size="large" tip="搜索中..." />
+            <Spin size="large" />
           </div>
-        ) : hasSearched && articles.length === 0 && resources.length === 0 ? (
+        ) : hasSearched && articles.length === 0 && resources.length === 0 && users.length === 0 && tags.length === 0 ? (
           <Empty description="未找到相关内容，请尝试其他关键词" />
         ) : (
           <>
@@ -203,7 +228,7 @@ const Search = () => {
                   dataSource={resources}
                   renderItem={(item) => (
                     <List.Item style={styles.resultItem}>
-                      <Link to={`/download`} style={{ width: '100%', textDecoration: 'none' }}>
+                      <Link to={`/download?highlight=${item.id}`} style={{ width: '100%', textDecoration: 'none' }}>
                         <Card hoverable style={{ width: '100%' }}>
                           <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
                             <div style={{ 
@@ -239,6 +264,62 @@ const Search = () => {
                     </List.Item>
                   )}
                 />
+              </>
+            )}
+
+            {users.length > 0 && (
+              <>
+                <Divider orientation="left">
+                  <Space>
+                    <UserOutlined />
+                    <Text strong>相关用户 ({users.length})</Text>
+                  </Space>
+                </Divider>
+                <List
+                  dataSource={users}
+                  renderItem={(item: any) => (
+                    <List.Item>
+                      <Link to={`/user/${item.id}`} style={{ textDecoration: 'none' }}>
+                        <Card hoverable size="small" style={{ width: '100%' }}>
+                          <Space>
+                            <Avatar src={item.avatar} icon={<UserOutlined />} />
+                            <div>
+                              <Text strong>{item.nickname || item.username}</Text>
+                              <Text type="secondary"> @{item.username}</Text>
+                              {item.bio && <div><Text type="secondary">{item.bio}</Text></div>}
+                            </div>
+                          </Space>
+                        </Card>
+                      </Link>
+                    </List.Item>
+                  )}
+                />
+              </>
+            )}
+
+            {tags.length > 0 && (
+              <>
+                <Divider orientation="left">
+                  <Space>
+                    <TagOutlined />
+                    <Text strong>相关标签 ({tags.length})</Text>
+                  </Space>
+                </Divider>
+                <Space wrap>
+                  {tags.map((tag: any) => (
+                    <Tag
+                      key={tag.id}
+                      color="blue"
+                      style={{ cursor: 'pointer', padding: '4px 16px', fontSize: 14 }}
+                      onClick={() => {
+                        setQuery(tag.name);
+                        runSearch(tag.name);
+                      }}
+                    >
+                      {tag.name}
+                    </Tag>
+                  ))}
+                </Space>
               </>
             )}
 

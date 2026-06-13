@@ -16,6 +16,7 @@ CREATE TABLE blog_user (
     follower_count INT DEFAULT 0,
     following_count INT DEFAULT 0,
     article_count INT DEFAULT 0,
+    coins INT DEFAULT 0,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted TINYINT DEFAULT 0
@@ -86,10 +87,11 @@ CREATE INDEX idx_article_like_user_id ON article_like(user_id);
 -- 5. 文章标签关联表
 DROP TABLE IF EXISTS article_tag;
 CREATE TABLE article_tag (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
     article_id BIGINT NOT NULL,
     tag_id BIGINT NOT NULL,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (article_id, tag_id)
+    UNIQUE (article_id, tag_id)
 );
 CREATE INDEX idx_article_tag_article_id ON article_tag(article_id);
 CREATE INDEX idx_article_tag_tag_id ON article_tag(tag_id);
@@ -191,3 +193,42 @@ CREATE INDEX idx_download_record_user_id ON download_record(user_id);
 CREATE INDEX idx_download_record_resource_id ON download_record(resource_id);
 
 -- 基础数据（用户、分类、标签）由 DataSeeder.java 插入
+
+-- 12. 会议表
+DROP TABLE IF EXISTS meeting;
+CREATE TABLE meeting (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    description TEXT,
+    start_time TIMESTAMP NOT NULL,
+    end_time TIMESTAMP,
+    location VARCHAR(200),
+    max_participants INT DEFAULT 50,
+    status VARCHAR(20) DEFAULT 'UPCOMING',
+    host_id BIGINT NOT NULL,
+    category_id BIGINT,
+    cover_image VARCHAR(255),
+    tags VARCHAR(500),
+    participant_count INT DEFAULT 0,
+    join_code VARCHAR(10),
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0
+);
+CREATE INDEX idx_meeting_host_id ON meeting(host_id);
+CREATE INDEX idx_meeting_status ON meeting(status);
+CREATE INDEX idx_meeting_start_time ON meeting(start_time);
+
+-- 13. 会议参与表
+DROP TABLE IF EXISTS meeting_participant;
+CREATE TABLE meeting_participant (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    meeting_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    role VARCHAR(20) DEFAULT 'PARTICIPANT',
+    joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    deleted TINYINT DEFAULT 0,
+    UNIQUE (meeting_id, user_id)
+);
+CREATE INDEX idx_mp_meeting_id ON meeting_participant(meeting_id);
+CREATE INDEX idx_mp_user_id ON meeting_participant(user_id);

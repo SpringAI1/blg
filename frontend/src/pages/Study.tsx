@@ -1,25 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Card, List, Typography, Tag, Empty, Spin, App, Space, Button, Progress, Row, Col, message as antMessage } from 'antd';
-import { BookOutlined, PlayCircleOutlined, PauseCircleOutlined, RightOutlined, ClockCircleOutlined, EyeOutlined, LikeOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
+import { Card, List, Typography, Tag, Empty, Spin, App, Space, Button, Progress, Row, Col } from 'antd';
+import { BookOutlined, PlayCircleOutlined, PauseCircleOutlined, EyeOutlined, CheckCircleOutlined, ReloadOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { Article, Category } from '@/types';
 import { articleApi } from '@/api/article';
 import { categoryApi } from '@/api/category';
+import { loadAllProgress, saveProgress, StudyProgress } from '@/utils/progress';
 
 const { Title, Text } = Typography;
 
-const STUDY_KEY = 'learning_progress';
-
-interface StudyProgress {
-  articleId: number;
-  status: 'in_progress' | 'completed' | 'paused';
-  startedAt: string;
-  lastAccessedAt: string;
-  progress: number; // 0-100
-}
-
 const Study = () => {
   const navigate = useNavigate();
+  const { message } = App.useApp();
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
@@ -27,7 +19,7 @@ const Study = () => {
   const [studyProgress, setStudyProgress] = useState<Map<number, StudyProgress>>(new Map());
 
   useEffect(() => {
-    loadProgress();
+    setStudyProgress(loadAllProgress());
     fetchCategories();
   }, []);
 
@@ -35,42 +27,18 @@ const Study = () => {
     fetchArticles();
   }, [selectedCategory]);
 
-  const loadProgress = () => {
-    try {
-      const raw = localStorage.getItem(STUDY_KEY);
-      if (raw) {
-        const data: Record<string, StudyProgress> = JSON.parse(raw);
-        const map = new Map<number, StudyProgress>();
-        Object.entries(data).forEach(([key, val]) => map.set(Number(key), val));
-        setStudyProgress(map);
-      }
-    } catch { /* ignore */ }
-  };
-
-  const saveProgress = (articleId: number, updates: Partial<StudyProgress>) => {
-    try {
-      const raw = localStorage.getItem(STUDY_KEY);
-      const data: Record<string, StudyProgress> = raw ? JSON.parse(raw) : {};
-      const existing = data[articleId] || {
-        articleId, status: 'in_progress' as const,
-        startedAt: new Date().toISOString(),
-        lastAccessedAt: new Date().toISOString(),
-        progress: 0,
-      };
-      data[articleId] = { ...existing, ...updates, lastAccessedAt: new Date().toISOString() };
-      localStorage.setItem(STUDY_KEY, JSON.stringify(data));
-      loadProgress();
-    } catch { /* ignore */ }
+  const handleSaveProgress = (articleId: number, updates: Partial<StudyProgress>) => {
+    saveProgress(articleId, updates, (map) => setStudyProgress(map));
   };
 
   const handleStartOrContinue = (article: Article) => {
     const progress = studyProgress.get(article.id);
     if (!progress) {
-      saveProgress(article.id, {
+      handleSaveProgress(article.id, {
         status: 'in_progress', progress: 10, startedAt: new Date().toISOString(),
       });
     } else if (progress.status === 'paused') {
-      saveProgress(article.id, { status: 'in_progress' });
+      handleSaveProgress(article.id, { status: 'in_progress' });
     }
     navigate(`/article/${article.id}`);
   };
@@ -78,15 +46,15 @@ const Study = () => {
   const handlePause = (e: React.MouseEvent, articleId: number) => {
     e.stopPropagation();
     e.preventDefault();
-    saveProgress(articleId, { status: 'paused' });
-    antMessage.success('已暂停学习');
+    handleSaveProgress(articleId, { status: 'paused' });
+    message.success('已暂停学习');
   };
 
   const handleComplete = (e: React.MouseEvent, articleId: number) => {
     e.stopPropagation();
     e.preventDefault();
-    saveProgress(articleId, { status: 'completed', progress: 100 });
-    antMessage.success('已完成学习！');
+    handleSaveProgress(articleId, { status: 'completed', progress: 100 });
+    message.success('已完成学习！');
   };
 
   const fetchArticles = async () => {
@@ -95,7 +63,6 @@ const Study = () => {
       const data = await articleApi.getPublishedArticles(1, 50, selectedCategory || undefined);
       setArticles(data.records || []);
     } catch (error) {
-      console.error('加载文章失败:', error);
     } finally {
       setLoading(false);
     }
@@ -132,7 +99,7 @@ const Study = () => {
             学习中: {Array.from(studyProgress.values()).filter(p => p.status === 'in_progress').length}
             {' | '}已完成: {Array.from(studyProgress.values()).filter(p => p.status === 'completed').length}
           </Text>
-          <Button size="small" icon={<ReloadOutlined />} onClick={loadProgress}>刷新</Button>
+          <Button size="small" icon={<ReloadOutlined />} onClick={() => setStudyProgress(loadAllProgress())}>刷新</Button>
         </Space>
       </div>
 
@@ -220,7 +187,7 @@ const Study = () => {
                         )}
                         {progress?.status === 'completed' && (
                           <Button size="small" icon={<ReloadOutlined />}
-                            onClick={() => { saveProgress(article.id, { status: 'in_progress', progress: 0 }); }}>
+                            onClick={() => { handleSaveProgress(article.id, { status: 'in_progress', progress: 0 }); }}>
                             重新学习
                           </Button>
                         )}

@@ -9,6 +9,7 @@ export interface User {
   followerCount?: number;
   followingCount?: number;
   articleCount?: number;
+  coins?: number;
   createTime?: string;
 }
 

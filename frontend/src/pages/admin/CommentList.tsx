@@ -1,4 +1,4 @@
-import { Table, Button, Modal, Tag, App } from 'antd';
+import { Table, Button, Card, App } from 'antd';
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ColumnType } from 'antd/es/table';
@@ -88,13 +88,19 @@ const CommentList = () => {
 
   return (
     <div>
-      <h1>评论管理</h1>
-      <Table
-        columns={columns}
-        dataSource={comments}
-        rowKey="id"
-        loading={loading}
-      />
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ margin: 0, fontWeight: 700, fontSize: 20 }}>评论管理</h2>
+        <span style={{ color: 'var(--color-text-tertiary)', fontSize: 13, marginTop: 4, display: 'block' }}>管理所有评论</span>
+      </div>
+      <Card style={{ borderRadius: 12, border: '1px solid var(--color-border-light)' }}>
+        <Table
+          columns={columns}
+          dataSource={comments}
+          rowKey="id"
+          loading={loading}
+          pagination={false}
+        />
+      </Card>
     </div>
   );
 };

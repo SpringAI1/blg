@@ -15,5 +15,6 @@ public class UserDTO {
     private Integer followerCount;
     private Integer followingCount;
     private Integer articleCount;
+    private Integer coins;
     private LocalDateTime createTime;
 }

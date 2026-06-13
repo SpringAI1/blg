@@ -2,12 +2,13 @@ spring:
   application:
     name: blog-backend
 
-  # 使用 H2 内存数据库（MySQL 兼容模式）
+  # 使用 H2 文件数据库（数据持久化到磁盘，重启不丢失）
+  # 生产环境建议使用 MySQL，配置见 .env.example
   datasource:
-    url: jdbc:h2:mem:blog;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    url: ${DB_URL:jdbc:h2:file:./data/blog;MODE=MySQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE}
     driver-class-name: org.h2.Driver
-    username: sa
-    password:
+    username: ${DB_USERNAME:sa}
+    password: ${DB_PASSWORD:}
 
   sql:
     init:
@@ -20,9 +21,9 @@ spring:
 
   data:
     redis:
-      host: localhost
-      port: 6379
-      password:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
       database: 0
       timeout: 3000ms
 
@@ -38,11 +39,11 @@ mybatis-plus:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 jwt:
-  secret: blog-jwt-secret-key-2024-personal-blog-system
-  expiration: 86400000
+  secret: ${JWT_SECRET:blog-jwt-secret-key-2024-personal-blog-system-with-enough-length-for-security}
+  expiration: ${JWT_EXPIRATION:86400000}
 
 logging:
   level:

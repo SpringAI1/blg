@@ -35,8 +35,8 @@ export interface DownloadResource {
 }
 
 export const downloadApi = {
-  getResources: (pageNum: number, pageSize: number, categoryId?: number, keyword?: string) =>
-    apiGet<PageResult<DownloadResource>>('/downloads', { pageNum, pageSize, categoryId, keyword }),
+  getResources: (pageNum: number, pageSize: number, categoryId?: number, keyword?: string, sort?: string) =>
+    apiGet<PageResult<DownloadResource>>('/downloads', { pageNum, pageSize, categoryId, keyword, sort }),
 
   getCategories: () =>
     apiGet<DownloadCategory[]>('/downloads/categories'),
@@ -48,6 +48,13 @@ export const downloadApi = {
     apiPost<void>(`/downloads/${id}/download`),
 
   redirectToDownload: (id: number) => {
-    window.open(`/api/downloads/${id}/redirect`, '_blank');
+    // 使用动态创建 <a> 标签触发下载，避免弹窗拦截
+    const a = document.createElement('a');
+    a.href = `/api/downloads/${id}/redirect`;
+    a.download = '';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
   },
 };

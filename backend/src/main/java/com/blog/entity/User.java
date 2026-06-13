@@ -31,6 +31,8 @@ public class User {
 
     private Integer articleCount;
 
+    private Integer coins;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

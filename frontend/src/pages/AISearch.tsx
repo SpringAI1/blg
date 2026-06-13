@@ -1,23 +1,27 @@
+import { useSearchParams } from 'react-router-dom';
 import { Card, Typography, Button, Space, App } from 'antd';
 import { RobotOutlined, SendOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useState, useRef, useEffect } from 'react';
+import { searchApi } from '@/api/search';
 
-const { Title, Text, Paragraph } = Typography;
+const { Title, Text } = Typography;
 
 interface Message {
   id: number;
   role: 'user' | 'assistant';
   content: string;
+  results?: { id: number; title: string; type: 'article' | 'resource'; link: string }[];
   timestamp: string;
 }
 
 const AISearch = () => {
   const { message } = App.useApp();
+  const [searchParams] = useSearchParams();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
       role: 'assistant',
-      content: '你好！我是AI搜索助手。我可以帮助你：\n\n1. 回答技术问题\n2. 搜索相关资料\n3. 提供代码示例\n4. 解释概念\n\n有什么我可以帮助你的吗？',
+      content: '你好！我是AI搜索助手。我可以帮助你：\n\n1. 搜索站内文章和资源\n2. 回答技术问题\n3. 提供相关链接\n\n有什么我可以帮助你的吗？',
       timestamp: new Date().toLocaleTimeString(),
     },
   ]);
@@ -33,13 +37,24 @@ const AISearch = () => {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    const keyword = searchParams.get('q') || searchParams.get('keyword') || '';
+    if (keyword) {
+      setInput(keyword);
+      handleSearch(keyword).catch(() => {});
+    }
+  }, [searchParams]);
+
   const handleSend = async () => {
     if (!input.trim()) return;
+    await handleSearch(input.trim());
+  };
 
+  const handleSearch = async (query: string) => {
     const userMessage: Message = {
       id: Date.now(),
       role: 'user',
-      content: input,
+      content: query,
       timestamp: new Date().toLocaleTimeString(),
     };
 
@@ -48,95 +63,60 @@ const AISearch = () => {
     setLoading(true);
 
     try {
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 使用真实搜索 API
+      const response = await searchApi.searchAll(query);
+      const articles = response?.articles || [];
+      const resources = response?.resources || [];
 
-      const mockResponse = getMockAIResponse(input);
+      let aiResponse = '';
+      const results: { id: number; title: string; type: 'article' | 'resource'; link: string }[] = [];
+
+      if (articles.length === 0 && resources.length === 0) {
+        aiResponse = `关于"${query}"，没有找到相关的站内内容。建议：\n\n1. 尝试其他关键词搜索\n2. 使用百度搜索获取更广泛的结果\n3. 浏览博客页面发现最新文章`;
+      } else {
+        aiResponse = `关于"${query}"，我找到了以下内容：\n\n`;
+
+        if (articles.length > 0) {
+          aiResponse += `**📄 文章 (${articles.length}篇)**\n\n`;
+          articles.slice(0, 5).forEach((a: any, i: number) => {
+            aiResponse += `${i + 1}. [${a.title}](/article/${a.id}) — ${a.summary?.substring(0, 60) || ''}...\n`;
+            results.push({ id: a.id, title: a.title, type: 'article', link: `/article/${a.id}` });
+          });
+          aiResponse += '\n';
+        }
+
+        if (resources.length > 0) {
+          aiResponse += `**📦 资源 (${resources.length}个)**\n\n`;
+          resources.slice(0, 5).forEach((r: any, i: number) => {
+            aiResponse += `${i + 1}. [${r.title}](/download?highlight=${r.id}) — ${r.description?.substring(0, 60) || ''}...\n`;
+            results.push({ id: r.id, title: r.title, type: 'resource', link: `/download?highlight=${r.id}` });
+          });
+          aiResponse += '\n';
+        }
+
+        aiResponse += `---\n*以上结果来自站内搜索，点击标题可直接访问。*`;
+      }
 
       const assistantMessage: Message = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: mockResponse,
+        content: aiResponse,
+        results: results.length > 0 ? results : undefined,
         timestamp: new Date().toLocaleTimeString(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
-      message.error('AI响应失败，请稍后重试');
+      message.error('搜索失败，请稍后重试');
+      setMessages(prev => [...prev, {
+        id: Date.now() + 1,
+        role: 'assistant',
+        content: `抱歉，搜索"${query}"时出现异常，请稍后重试。`,
+        timestamp: new Date().toLocaleTimeString(),
+      }]);
     } finally {
       setLoading(false);
     }
-  };
-
-  const getMockAIResponse = (question: string): string => {
-    if (question.includes('java') || question.includes('Java')) {
-      return `关于Java的问题，我来为你解答：
-
-**Java是一种面向对象的编程语言，具有以下特点：**
-
-1. **平台无关性**：通过JVM实现"一次编写，到处运行"
-
-2. **面向对象**：支持封装、继承、多态三大特性
-
-3. **自动内存管理**：垃圾回收机制
-
-4. **丰富的生态系统**：
-   - Spring框架
-   - Hibernate
-   - Maven/Gradle
-
-**示例代码：**
-\`\`\`java
-public class HelloWorld {
-    public static void main(String[] args) {
-        System.out.println("Hello, World!");
-    }
-}
-\`\`\`
-
-如果你想深入学习Java，可以从《Java核心技术》开始。有什么具体问题吗？`;
-    }
-
-    if (question.includes('python') || question.includes('Python')) {
-      return `Python是一种高级编程语言，特别适合初学者入门：
-
-**Python的特点：**
-
-1. **简洁易学**：语法简洁，接近自然语言
-
-2. **应用广泛**：
-   - Web开发（Django、Flask）
-   - 数据分析（Pandas、NumPy）
-   - 机器学习（TensorFlow、PyTorch）
-   - 自动化脚本
-
-**示例代码：**
-\`\`\`python
-# Hello World
-print("Hello, World!")
-
-# 列表推导式
-squares = [x**2 for x in range(10)]
-\`\`\`
-
-Python非常适合作为第一门编程语言！有什么想问的吗？`;
-    }
-
-    return `你问的是："${question}"
-
-作为AI搜索助手，我可以帮你解答各类技术问题。不过我目前处于演示模式，无法访问真实的搜索结果。
-
-**建议：**
-
-1. 使用百度搜索获取最新信息
-2. 访问CSDN等技术社区
-3. 查阅官方文档
-
-你可以尝试问我一些具体的技术问题，比如：
-- Java/Python/React等语言问题
-- 算法和数据结构
-- 开源项目推荐
-
-我会尽力用我的知识来帮助你！`;
   };
 
   return (

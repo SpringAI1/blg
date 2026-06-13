@@ -46,6 +46,22 @@ public class AuthController {
 
     @PostMapping("/register")
     public Result<Void> register(@RequestBody User user) {
+        // 参数校验
+        if (user.getUsername() == null || user.getUsername().trim().isEmpty()) {
+            return Result.error(400, "用户名不能为空");
+        }
+        if (user.getUsername().length() < 3 || user.getUsername().length() > 20) {
+            return Result.error(400, "用户名长度需在3-20个字符之间");
+        }
+        if (user.getPassword() == null || user.getPassword().isEmpty()) {
+            return Result.error(400, "密码不能为空");
+        }
+        if (user.getPassword().length() < 6) {
+            return Result.error(400, "密码长度不能少于6位");
+        }
+        if (user.getEmail() == null || !user.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            return Result.error(400, "邮箱格式不正确");
+        }
         try {
             userService.register(user.getUsername(), user.getPassword(), user.getEmail());
             return Result.success();

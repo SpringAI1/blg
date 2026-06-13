@@ -1,24 +1,21 @@
+import { axiosInstance } from '@/utils/http';
+
 export const fileApi = {
   upload: async (file: File) => {
     const formData = new FormData();
     formData.append('file', file);
     
-    const token = localStorage.getItem('token');
-    const response = await fetch('/api/files/upload', {
-      method: 'POST',
-      body: formData,
-      credentials: 'include',
-      headers: token ? {
-        'Authorization': `Bearer ${token}`
-      } : {}
+    const response = await axiosInstance.post('/files/upload', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      timeout: 60000,
     });
     
-    const data = await response.json();
-    
-    if (data.code !== 200) {
-      throw new Error(data.message || '上传失败');
+    // axios 拦截器返回了 response.data（即 {code, message, data}）
+    const result = response as any;
+    if (result.code !== 200) {
+      throw new Error(result.message || '上传失败');
     }
     
-    return data.data;
+    return result.data as { url: string };
   }
 };

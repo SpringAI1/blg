@@ -100,6 +100,7 @@ public class DataSeeder implements CommandLineRunner {
             user.setNickname(nicknames[i]);
             user.setBio(bios[i]);
             user.setRole(roles[i]);
+            user.setCoins(1000);
             user.setFollowerCount(5 + i * 2);
             user.setFollowingCount(10 - i);
             user.setArticleCount(5 + i * 3);

@@ -41,11 +41,12 @@ const DownloadPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [detailModal, setDetailModal] = useState<DownloadResource | null>(null);
+  const [sortBy, setSortBy] = useState<'latest' | 'downloads' | 'rating' | 'views'>('latest');
   const pageSize = 12;
 
   useEffect(() => {
     fetchCategories();
-    fetchResources(1, null, '');
+    fetchResources(1, null, '', 'latest');
   }, []);
 
   const fetchCategories = async () => {
@@ -54,7 +55,6 @@ const DownloadPage = () => {
       const result = await downloadApi.getCategories();
       setCategories(result || []);
     } catch (error) {
-      console.error('获取分类失败:', error);
       message.error('获取分类失败');
       setCategories([]);
     } finally {
@@ -62,14 +62,13 @@ const DownloadPage = () => {
     }
   };
 
-  const fetchResources = async (page: number, categoryId: number | null, kw: string) => {
+  const fetchResources = async (page: number, categoryId: number | null, kw: string, sort?: string) => {
     setLoading(true);
     try {
-      const result = await downloadApi.getResources(page, pageSize, categoryId || undefined, kw);
+      const result = await downloadApi.getResources(page, pageSize, categoryId || undefined, kw, sort || sortBy);
       setResources(result?.records || []);
       setTotal(result?.total || 0);
     } catch (error) {
-      console.error('获取资源失败:', error);
       message.error('获取资源失败');
       setResources([]);
       setTotal(0);
@@ -78,31 +77,36 @@ const DownloadPage = () => {
     }
   };
 
+  const handleSortChange = (sort: 'latest' | 'downloads' | 'rating' | 'views') => {
+    setSortBy(sort);
+    fetchResources(1, selectedCategory, keyword, sort);
+    setCurrentPage(1);
+  };
+
   const handleCategoryClick = (categoryId: number | null) => {
     setSelectedCategory(categoryId);
     setCurrentPage(1);
-    fetchResources(1, categoryId, keyword);
+    fetchResources(1, categoryId, keyword, sortBy);
   };
 
   const handleSearch = (value: string) => {
     setKeyword(value);
     setCurrentPage(1);
-    fetchResources(1, selectedCategory, value);
+    fetchResources(1, selectedCategory, value, sortBy);
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
-    fetchResources(page, selectedCategory, keyword);
+    fetchResources(page, selectedCategory, keyword, sortBy);
   };
 
   const handleDownload = async (resource: DownloadResource) => {
     try {
-      await downloadApi.recordDownload(resource.id);
+      // redirectToDownload 内部已包含 recordDownload，无需重复调用
       downloadApi.redirectToDownload(resource.id);
       message.success('开始下载');
-    } catch (error) {
-      console.error('下载失败:', error);
-      message.error('下载失败');
+    } catch {
+      // 忽略失败
     }
   };
 
@@ -204,10 +208,10 @@ const DownloadPage = () => {
           <Card style={{ marginBottom: 16 }}>
             <Space>
               <span style={{ color: '#999' }}>排序：</span>
-              <Button type="primary" size="small">最新发布</Button>
-              <Button size="small">下载最多</Button>
-              <Button size="small">评分最高</Button>
-              <Button size="small">浏览最多</Button>
+              <Button type={sortBy === 'latest' ? 'primary' : 'default'} size="small" onClick={() => handleSortChange('latest')}>最新发布</Button>
+              <Button type={sortBy === 'downloads' ? 'primary' : 'default'} size="small" onClick={() => handleSortChange('downloads')}>下载最多</Button>
+              <Button type={sortBy === 'rating' ? 'primary' : 'default'} size="small" onClick={() => handleSortChange('rating')}>评分最高</Button>
+              <Button type={sortBy === 'views' ? 'primary' : 'default'} size="small" onClick={() => handleSortChange('views')}>浏览最多</Button>
             </Space>
           </Card>
 
@@ -230,7 +234,10 @@ const DownloadPage = () => {
                         type="primary"
                         size="small"
                         icon={<DownloadOutlined />}
-                        onClick={() => handleDownload(resource)}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          handleDownload(resource);
+                        }}
                       >
                         立即下载
                       </Button>

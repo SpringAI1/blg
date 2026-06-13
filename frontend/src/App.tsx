@@ -26,6 +26,9 @@ import Subscribe from '@/pages/Subscribe';
 import Follow from '@/pages/Follow';
 import History from '@/pages/History';
 import TechMeeting from '@/pages/TechMeeting';
+import MeetingRoom from '@/pages/MeetingRoom';
+import UserProfile from '@/pages/UserProfile';
+import MemberCenter from '@/pages/MemberCenter';
 
 function App() {
   return (
@@ -34,17 +37,52 @@ function App() {
       theme={{
         token: {
           colorPrimary: '#ff6b00',
+          colorLink: '#ff6b00',
+          borderRadius: 8,
+          fontFamily: "'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
+          boxShadowSecondary: '0 4px 12px rgba(0, 0, 0, 0.06)',
+        },
+        components: {
+          Card: {
+            paddingLG: 24,
+            borderRadiusLG: 10,
+            boxShadowTertiary: '0 1px 3px rgba(0, 0, 0, 0.04)',
+          },
+          Button: {
+            borderRadiusLG: 8,
+            fontWeight: 500,
+          },
+          Menu: {
+            itemBorderRadius: 8,
+            itemMarginInline: 8,
+            itemMarginBlock: 2,
+          },
+          Input: {
+            borderRadius: 8,
+            borderRadiusLG: 8,
+          },
+          Select: {
+            borderRadius: 8,
+            borderRadiusLG: 8,
+          },
+          Modal: {
+            borderRadiusLG: 12,
+          },
+          Table: {
+            borderRadiusLG: 10,
+          },
         },
       }}
     >
       <AntdApp>
         <Routes>
-          <Route index element={<Home />} />
           <Route path="/" element={<Layout />}>
+            <Route index element={<Home />} />
             <Route path="blog" element={<Blog />} />
             <Route path="search" element={<Search />} />
             <Route path="ai-search" element={<AISearch />} />
-            <Route path="favorites" element={<Favorites />} />
+            <Route path="favorites" element={<ProtectedRoute><Favorites /></ProtectedRoute>} />
             <Route path="download" element={<DownloadPage />} />
             <Route path="study" element={<Study />} />
             <Route path="community" element={<Community />} />
@@ -52,7 +90,37 @@ function App() {
             <Route path="follow" element={<Follow />} />
             <Route path="history" element={<History />} />
             <Route path="tech-meeting" element={<TechMeeting />} />
+            <Route path="meeting/:id" element={<MeetingRoom />} />
+            <Route
+              path="meeting/create"
+              element={<ProtectedRoute><TechMeeting /></ProtectedRoute>}
+            />
             <Route path="article/:id" element={<ArticleDetail />} />
+            <Route path="user/:id" element={<UserProfile />} />
+            <Route
+              path="member"
+              element={
+                <ProtectedRoute>
+                  <MemberCenter />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="creator/articles/new"
+              element={
+                <ProtectedRoute>
+                  <ArticleEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="creator/articles/edit/:id"
+              element={
+                <ProtectedRoute>
+                  <ArticleEditor />
+                </ProtectedRoute>
+              }
+            />
             <Route path="login" element={<Login />} />
             <Route path="register" element={<Register />} />
           </Route>
@@ -60,7 +128,7 @@ function App() {
           <Route
             path="/admin"
             element={
-              <ProtectedRoute>
+              <ProtectedRoute requireAdmin>
                 <AdminLayout />
               </ProtectedRoute>
             }

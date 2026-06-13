@@ -37,6 +37,10 @@ public class CategoryController {
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public Result<Void> deleteCategory(@PathVariable Long id) {
+        Category existing = categoryService.getById(id);
+        if (existing == null) {
+            return Result.error(404, "分类不存在");
+        }
         categoryService.deleteCategory(id);
         return Result.success();
     }
