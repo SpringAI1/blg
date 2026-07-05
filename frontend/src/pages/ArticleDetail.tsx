@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Card, Spin, Typography, Tag, Button, App as AntdApp, Space, Input, List, Avatar, Form, Popconfirm } from 'antd';
-import { EyeOutlined, LikeOutlined, EditOutlined, StarOutlined, StarFilled, UserOutlined, UserAddOutlined, SendOutlined, LikeFilled, ArrowLeftOutlined, HomeOutlined, MessageOutlined, ClockCircleOutlined } from '@ant-design/icons';
+import { Card, Spin, Typography, Tag, Button, App as AntdApp, Space, Input, Avatar, Form, Tooltip } from 'antd';
+import { EyeOutlined, LikeOutlined, EditOutlined, StarOutlined, StarFilled, UserOutlined, UserAddOutlined, SendOutlined, LikeFilled, ArrowLeftOutlined, HomeOutlined, MessageOutlined, ClockCircleOutlined, ShareAltOutlined, WechatOutlined, WeiboOutlined, LinkOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import dayjs from 'dayjs';
 import { Article } from '@/types';
+import { CommentDTO } from '@/api/comment';
 import { articleApi } from '@/api/article';
 import { favoriteApi } from '@/api/favorite';
 import { followApi } from '@/api/follow';
@@ -16,17 +17,6 @@ import { saveProgress } from '@/utils/progress';
 const { Title, Text } = Typography;
 const { TextArea } = Input;
 
-interface Comment {
-  id: number;
-  content: string;
-  userId: number;
-  username: string;
-  userAvatar?: string | null;
-  parentId: number | null;
-  children?: Comment[];
-  createTime: string;
-  likes?: number;
-}
 
 const ArticleDetail = () => {
   const { id } = useParams<{ id: string }>();
@@ -37,13 +27,14 @@ const ArticleDetail = () => {
   const [isFavorited, setIsFavorited] = useState(false);
   const [isFollowing, setIsFollowing] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
-  const [comments, setComments] = useState<Comment[]>([]);
+  const [comments, setComments] = useState<CommentDTO[]>([]);
   const [commentLoading, setCommentLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [replyingTo, setReplyingTo] = useState<Comment | null>(null);
+  const [replyingTo, setReplyingTo] = useState<CommentDTO | null>(null);
   const [replyForm] = Form.useForm();
+  const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   
-  const handleReply = (comment: Comment) => {
+  const handleReply = (comment: CommentDTO) => {
     setReplyingTo(comment);
     setTimeout(() => {
       replyForm.setFieldsValue({ replyContent: '' });
@@ -64,7 +55,7 @@ const ArticleDetail = () => {
     saveProgress(articleId, updates);
   };
 
-  const countComments = (items: Comment[]): number =>
+  const countComments = (items: CommentDTO[]): number =>
     items.reduce((sum, item) => sum + 1 + countComments(item.children || []), 0);
 
   const fetchArticle = async () => {
@@ -80,6 +71,7 @@ const ArticleDetail = () => {
         }
       }
       fetchComments();
+      articleApi.getRelatedArticles(Number(id)).then(setRelatedArticles).catch(() => {});
     } catch (error) {
       message.error('加载文章失败');
     } finally {
@@ -222,6 +214,7 @@ const ArticleDetail = () => {
         form.resetFields();
         handleCancelReply();
         fetchComments();
+      articleApi.getRelatedArticles(Number(id)).then(setRelatedArticles).catch(() => {});
       }
     } catch (error: any) {
       message.error(error.message || '评论失败');
@@ -230,7 +223,7 @@ const ArticleDetail = () => {
     }
   };
 
-  const renderCommentItem = (comment: Comment) => (
+  const renderCommentItem = (comment: CommentDTO) => (
     <div key={comment.id} style={styles.commentItem}>
       <div style={{ display: 'flex', gap: 12 }}>
         <Avatar src={comment.userAvatar} icon={<UserOutlined />} size={36} style={{ flexShrink: 0 }} />
@@ -271,6 +264,7 @@ const ArticleDetail = () => {
                   message.success('回复成功');
                   handleCancelReply();
                   fetchComments();
+      articleApi.getRelatedArticles(Number(id)).then(setRelatedArticles).catch(() => {});
                 } catch (err: any) {
                   message.error(err.message || '回复失败');
                 } finally {
@@ -359,7 +353,13 @@ const ArticleDetail = () => {
   }
 
   return (
-    <div className="fade-in-up" style={{ maxWidth: 1000, margin: '0 auto' }}>
+    <div className="fade-in-up" style={{ maxWidth: 1000, margin: '0 auto', position: 'relative' }}>
+      {/* 阅读进度条 */}
+      <div id="reading-progress" style={{
+        position: 'fixed', top: 0, left: 0, width: '0%', height: 3,
+        background: 'linear-gradient(90deg, #ff6b00, #ff8c38)',
+        zIndex: 1001, transition: 'width 0.1s linear',
+      }} />
       {/* 导航栏 */}
       <div style={{ marginBottom: 20, display: 'flex', gap: 8 }}>
         <Button 

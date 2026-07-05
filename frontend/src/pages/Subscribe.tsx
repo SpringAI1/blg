@@ -34,6 +34,7 @@ const Subscribe = () => {
       setFollowing(list);
       setFollowingIds(new Set(list.map(u => u.id)));
     } catch (error) {
+      message.error('获取订阅列表失败');
     } finally {
       setLoading(false);
     }

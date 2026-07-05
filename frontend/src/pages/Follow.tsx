@@ -1,21 +1,10 @@
 import { Card, List, Typography, Button, Tabs, Space, Avatar, Empty, Spin, App, Pagination } from 'antd';
 import { PlusOutlined, UserOutlined, TeamOutlined, StarOutlined, CheckOutlined, StopOutlined } from '@ant-design/icons';
 import { useState, useEffect, useCallback } from 'react';
-import { followApi } from '@/api/follow';
+import { followApi, FollowUser } from '@/api/follow';
 import { useAuthStore } from '@/store/auth';
 
 const { Title, Text } = Typography;
-
-interface FollowUser {
-  id: number;
-  username: string;
-  nickname?: string;
-  avatar?: string;
-  bio?: string;
-  followerCount?: number;
-  followingCount?: number;
-  articleCount?: number;
-}
 
 const PAGE_SIZE = 10;
 

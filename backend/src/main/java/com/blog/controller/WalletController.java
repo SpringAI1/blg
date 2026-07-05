@@ -39,13 +39,12 @@ public class WalletController {
 
         int amount = Integer.parseInt(amountObj.toString());
         if (amount <= 0) return Result.error(400, "金额必须大于0");
+        if (amount > 1000000) return Result.error(400, "单次充值金额不能超过1000000");
+
+        // 原子更新余额
+        userRepository.addCoins(userId, amount);
 
         User user = userRepository.selectById(userId);
-        if (user == null) return Result.error(404, "用户不存在");
-
-        user.setCoins((user.getCoins() == null ? 0 : user.getCoins()) + amount);
-        userRepository.updateById(user);
-
-        return Result.success(user.getCoins());
+        return Result.success(user != null ? user.getCoins() : 0);
     }
 }

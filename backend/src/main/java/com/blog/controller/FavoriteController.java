@@ -68,11 +68,8 @@ public class FavoriteController {
         favorite.setUserId(userId);
         favoriteRepository.insert(favorite);
 
-        Article article = articleRepository.selectById(favorite.getArticleId());
-        if (article != null) {
-            article.setFavoriteCount(article.getFavoriteCount() == null ? 1 : article.getFavoriteCount() + 1);
-            articleRepository.updateById(article);
-        }
+        // 原子更新
+        articleRepository.incrementFavoriteCount(favorite.getArticleId());
 
         return Result.success("收藏成功");
     }
@@ -86,11 +83,8 @@ public class FavoriteController {
         // 物理删除（绕过逻辑删除），避免再次收藏时 UNIQUE 约束冲突
         favoriteRepository.deletePhysical(userId, articleId);
 
-        Article article = articleRepository.selectById(articleId);
-        if (article != null && article.getFavoriteCount() != null && article.getFavoriteCount() > 0) {
-            article.setFavoriteCount(article.getFavoriteCount() - 1);
-            articleRepository.updateById(article);
-        }
+        // 原子更新
+        articleRepository.decrementFavoriteCount(articleId);
 
         return Result.success("取消收藏成功");
     }

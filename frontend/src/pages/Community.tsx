@@ -52,6 +52,7 @@ const Community = () => {
         });
       }
     } catch (error) {
+      message.error('加载社区内容失败');
     } finally {
       setLoading(false);
     }

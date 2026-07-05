@@ -6,6 +6,7 @@ import com.blog.entity.ArticleLike;
 import com.blog.service.ArticleService;
 import com.blog.dto.ArticleDTO;
 import com.blog.util.SecurityUtil;
+import com.blog.util.XssUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.blog.repository.ArticleLikeRepository;
@@ -31,8 +32,17 @@ public class ArticleController {
             @RequestParam(defaultValue = "10") int pageSize,
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Long tagId,
-            @RequestParam(required = false) String keyword) {
-        return Result.success(articleService.getPublishedArticles(pageNum, pageSize, categoryId, tagId, keyword));
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String sortBy) {
+        return Result.success(articleService.getPublishedArticles(pageNum, pageSize, categoryId, tagId, keyword, sortBy));
+    }
+
+    @GetMapping("/user/{userId}")
+    public Result<Page<ArticleDTO>> getArticlesByUserId(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "1") int pageNum,
+            @RequestParam(defaultValue = "10") int pageSize) {
+        return Result.success(articleService.getPublishedArticles(pageNum, pageSize, userId));
     }
 
     @GetMapping("/all")
@@ -72,7 +82,21 @@ public class ArticleController {
 
     @GetMapping("/{id}")
     public Result<ArticleDTO> getArticle(@PathVariable Long id) {
-        return Result.success(articleService.getArticle(id));
+        ArticleDTO article = articleService.getArticle(id);
+        if (article == null) {
+            return Result.error(404, "文章不存在");
+        }
+        // 草稿文章仅作者或管理员可访问
+        if (!"PUBLISHED".equals(article.getStatus())) {
+            Long userId = SecurityUtil.getCurrentUserId();
+            if (userId == null || !userId.equals(article.getUserId())) {
+                String role = SecurityUtil.getCurrentUser() != null ? SecurityUtil.getCurrentUser().getRole() : "";
+                if (!"ADMIN".equals(role)) {
+                    return Result.error(403, "文章未发布");
+                }
+            }
+        }
+        return Result.success(article);
     }
 
     @PostMapping
@@ -84,9 +108,9 @@ public class ArticleController {
 
         try {
             Article article = new Article();
-            article.setTitle((String) requestBody.get("title"));
-            article.setContent((String) requestBody.get("content"));
-            article.setSummary((String) requestBody.get("summary"));
+            article.setTitle(XssUtil.sanitizeTitle((String) requestBody.get("title")));
+            article.setContent(XssUtil.sanitizeContent((String) requestBody.get("content")));
+            article.setSummary(XssUtil.sanitize((String) requestBody.get("summary")));
             article.setCoverImage((String) requestBody.get("coverImage"));
             
             // 安全地转换 categoryId
@@ -146,9 +170,9 @@ public class ArticleController {
 
         Article article = new Article();
         article.setId(id);
-        article.setTitle((String) requestBody.get("title"));
-        article.setContent((String) requestBody.get("content"));
-        article.setSummary((String) requestBody.get("summary"));
+        article.setTitle(XssUtil.sanitizeTitle((String) requestBody.get("title")));
+        article.setContent(XssUtil.sanitizeContent((String) requestBody.get("content")));
+        article.setSummary(XssUtil.sanitize((String) requestBody.get("summary")));
         article.setCoverImage((String) requestBody.get("coverImage"));
         
         Object categoryIdObj = requestBody.get("categoryId");
@@ -223,5 +247,10 @@ public class ArticleController {
         wrapper.eq(ArticleLike::getArticleId, id);
         wrapper.eq(ArticleLike::getUserId, userId);
         return Result.success(articleLikeRepository.selectCount(wrapper) > 0);
+    }
+
+    @GetMapping("/{id}/related")
+    public Result<List<ArticleDTO>> getRelatedArticles(@PathVariable Long id) {
+        return Result.success(articleService.getRelatedArticles(id, 5));
     }
 }

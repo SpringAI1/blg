@@ -2,6 +2,8 @@ package com.blog.config;
 
 import com.blog.entity.*;
 import com.blog.repository.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -14,6 +16,7 @@ import java.time.LocalDateTime;
 @Order(2)
 public class DataSeeder implements CommandLineRunner {
 
+    private static final Logger log = LoggerFactory.getLogger(DataSeeder.class);
     private final JdbcTemplate jdbcTemplate;
     private final PasswordEncoder passwordEncoder;
     private final UserRepository userRepository;
@@ -46,27 +49,20 @@ public class DataSeeder implements CommandLineRunner {
         try {
             Long count = userRepository.selectCount(null);
             if (count != null && count > 0) {
-                System.out.println("已有数据，更新用户密码...");
-                updateUserPasswords();
-                System.out.println("密码更新完成！");
+                log.info("已有数据，跳过数据播种");
                 return;
             }
         } catch (Exception e) {
             // 表可能不存在
         }
 
-        System.out.println("开始播种数据...");
+        log.info("开始播种数据...");
         seedData();
-        System.out.println("数据播种完成！");
+        log.info("数据播种完成！");
     }
 
     private void updateUserPasswords() {
-        String encodedPassword = passwordEncoder.encode("123456");
-        String[] usernames = {"admin", "zhangwei", "lina", "wanghao", "chenli"};
-        for (String username : usernames) {
-            jdbcTemplate.update("UPDATE blog_user SET password = ? WHERE username = ?", encodedPassword, username);
-        }
-        System.out.println("  更新密码: " + usernames.length + " 个用户");
+        // 不再需要 — DataSeeder 只在首次运行播种，密码初始已编码
     }
 
     private void seedData() {

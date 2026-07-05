@@ -10,6 +10,12 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @EnableWebSocketMessageBroker
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
+    private final JwtWebSocketInterceptor jwtWebSocketInterceptor;
+
+    public WebSocketConfig(JwtWebSocketInterceptor jwtWebSocketInterceptor) {
+        this.jwtWebSocketInterceptor = jwtWebSocketInterceptor;
+    }
+
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
         // 客户端订阅的前缀 — 服务器推送消息到这些目的地
@@ -22,11 +28,13 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         // 原生 WebSocket 端点（给 @stomp/stompjs 用）
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*");
+                .setAllowedOriginPatterns("*")
+                .addInterceptors(jwtWebSocketInterceptor);
 
         // SockJS 降级端点（给浏览器降级用）
         registry.addEndpoint("/ws")
                 .setAllowedOriginPatterns("*")
+                .addInterceptors(jwtWebSocketInterceptor)
                 .withSockJS();
     }
 }

@@ -1,0 +1,8 @@
+# Test application properties for blog-backend
+spring.datasource.url=jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1
+spring.datasource.driver-class-name=org.h2.Driver
+spring.datasource.username=sa
+spring.datasource.password=
+spring.sql.init.mode=never
+jwt.secret=test-jwt-secret-key-for-unit-tests-with-at-least-256-bits
+jwt.expiration=86400000

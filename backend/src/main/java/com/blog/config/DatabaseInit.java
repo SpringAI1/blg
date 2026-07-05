@@ -1,5 +1,8 @@
 package com.blog.config;
 
+import com.blog.util.SqlParserUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.annotation.Order;
@@ -11,12 +14,13 @@ import org.springframework.util.FileCopyUtils;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.List;
 
 @Component
 @Order(1)
 public class DatabaseInit implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(DatabaseInit.class);
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
@@ -29,11 +33,11 @@ public class DatabaseInit implements CommandLineRunner {
         try {
             Integer count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM article", Integer.class);
             if (count != null && count > 0) {
-                System.out.println("数据库已包含数据，跳过初始化");
+                log.info("数据库已包含数据，跳过初始化");
                 return;
             }
         } catch (Exception e) {
-            System.out.println("开始初始化数据库...");
+            log.info("开始初始化数据库...");
         }
 
         String url = env.getProperty("spring.datasource.url", "");
@@ -44,7 +48,7 @@ public class DatabaseInit implements CommandLineRunner {
             ClassPathResource schemaResource = new ClassPathResource(schemaFile);
             if (schemaResource.exists()) {
                 String sql = FileCopyUtils.copyToString(new InputStreamReader(schemaResource.getInputStream(), StandardCharsets.UTF_8));
-                List<String> statements = parseSqlStatements(sql);
+                List<String> statements = SqlParserUtil.parseSqlStatements(sql);
 
                 int successCount = 0;
                 int errorCount = 0;
@@ -55,77 +59,14 @@ public class DatabaseInit implements CommandLineRunner {
                         successCount++;
                     } catch (Exception e) {
                         errorCount++;
-                        System.out.println("执行SQL出错 (继续下一个): " + e.getMessage());
+                        log.warn("执行SQL出错 (继续下一个): {}", e.getMessage());
                     }
                 }
 
-                System.out.println("数据库初始化完成！成功: " + successCount + ", 错误: " + errorCount);
+                log.info("数据库初始化完成！成功: {}, 错误: {}", successCount, errorCount);
             }
         } catch (Exception e) {
-            System.out.println("数据库初始化失败: " + e.getMessage());
-            e.printStackTrace();
+            log.error("数据库初始化失败", e);
         }
-    }
-
-    private List<String> parseSqlStatements(String sql) {
-        List<String> statements = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inString = false;
-        char stringChar = '\0';
-        boolean inCommentLine = false;
-        boolean inCommentBlock = false;
-
-        for (int i = 0; i < sql.length(); i++) {
-            char c = sql.charAt(i);
-
-            if (inCommentLine) {
-                if (c == '\n' || c == '\r') {
-                    inCommentLine = false;
-                }
-                continue;
-            }
-            if (inCommentBlock) {
-                if (c == '*' && i + 1 < sql.length() && sql.charAt(i + 1) == '/') {
-                    inCommentBlock = false;
-                    i++;
-                }
-                continue;
-            }
-
-            if (!inString && c == '-' && i + 1 < sql.length() && sql.charAt(i + 1) == '-') {
-                inCommentLine = true;
-                i++;
-                continue;
-            }
-            if (!inString && c == '/' && i + 1 < sql.length() && sql.charAt(i + 1) == '*') {
-                inCommentBlock = true;
-                i++;
-                continue;
-            }
-
-            if ((c == '\'' || c == '\"') && !inString) {
-                inString = true;
-                stringChar = c;
-            } else if (inString && c == stringChar) {
-                inString = false;
-            }
-
-            if (!inString && c == ';') {
-                String trimmed = current.toString().trim();
-                if (!trimmed.isEmpty()) {
-                    statements.add(trimmed);
-                }
-                current.setLength(0);
-            } else {
-                current.append(c);
-            }
-        }
-
-        String trimmed = current.toString().trim();
-        if (!trimmed.isEmpty()) {
-            statements.add(trimmed);
-        }
-
-        return statements;
     }
 }

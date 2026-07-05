@@ -8,5 +8,6 @@ import java.util.List;
 public interface TagService extends IService<Tag> {
     List<TagDTO> getAllTags();
     TagDTO createTag(Tag tag);
+    TagDTO updateTag(Long id, Tag tag);
     void deleteTag(Long id);
 }

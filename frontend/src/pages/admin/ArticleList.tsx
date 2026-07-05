@@ -17,7 +17,7 @@ const ArticleList = () => {
   const fetchArticles = async (pageNum: number) => {
     setLoading(true);
     try {
-      const data = await articleApi.getArticlesByUser(pageNum, 10);
+      const data = await articleApi.getAllArticles(pageNum, 10);
       setArticles(data.records);
       setTotal(data.total);
       setPage(pageNum);

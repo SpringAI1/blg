@@ -13,6 +13,10 @@ public class Tag {
 
     private String name;
 
+    private String slug;
+
+    private String color;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 }

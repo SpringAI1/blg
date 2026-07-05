@@ -1,6 +1,7 @@
 package com.blog.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.blog.entity.User;
 import com.blog.repository.UserRepository;
@@ -91,6 +92,33 @@ public class UserServiceImpl extends ServiceImpl<UserRepository, User> implement
             user.setPassword(passwordEncoder.encode(password));
         }
 
+        baseMapper.updateById(user);
+    }
+
+    @Override
+    public Page<UserDTO> getUserList(int pageNum, int pageSize, String keyword) {
+        LambdaQueryWrapper<User> wrapper = new LambdaQueryWrapper<>();
+        wrapper.orderByDesc(User::getCreateTime);
+        if (keyword != null && !keyword.isEmpty()) {
+            wrapper.and(w -> w.like(User::getUsername, keyword)
+                .or()
+                .like(User::getNickname, keyword)
+                .or()
+                .like(User::getEmail, keyword));
+        }
+        Page<User> userPage = baseMapper.selectPage(new Page<>(pageNum, pageSize), wrapper);
+        Page<UserDTO> dtoPage = new Page<>(userPage.getCurrent(), userPage.getSize(), userPage.getTotal());
+        dtoPage.setRecords(userPage.getRecords().stream().map(this::convertToDTO).collect(java.util.stream.Collectors.toList()));
+        return dtoPage;
+    }
+
+    @Override
+    public void updateUserRole(Long id, String role) {
+        User user = baseMapper.selectById(id);
+        if (user == null) {
+            throw new RuntimeException("用户不存在");
+        }
+        user.setRole(role);
         baseMapper.updateById(user);
     }
 

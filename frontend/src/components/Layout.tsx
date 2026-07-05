@@ -4,17 +4,20 @@ import {
   HomeOutlined, UserOutlined, LogoutOutlined, BookOutlined,
   DownloadOutlined, ReadOutlined, TeamOutlined, AppstoreOutlined,
   ApiOutlined, CodeOutlined, CalendarOutlined, BellOutlined, PlusOutlined,
-  SearchOutlined, HeartOutlined, HistoryOutlined, StarOutlined, MenuOutlined
+  SearchOutlined, HeartOutlined, HistoryOutlined, StarOutlined, MenuOutlined,
+  SunOutlined, MoonOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/api/auth';
 import { useState } from 'react';
+import { useThemeStore } from '@/store/theme';
 
 const { Header, Content, Sider } = AntLayout;
 const { useBreakpoint } = Grid;
 
 const LayoutComponent = () => {
-  const { user, isAuthenticated, logout } = useAuthStore();
+  const { user, isAuthenticated, logout, _hydrated } = useAuthStore();
+  const { mode, toggle: toggleTheme } = useThemeStore();
   const navigate = useNavigate();
   const location = useLocation();
   const screens = useBreakpoint();
@@ -169,11 +172,19 @@ const LayoutComponent = () => {
               <Button type="text" icon={<SearchOutlined />} onClick={() => setShowMobileSearch(!showMobileSearch)}
                 style={{ color: 'var(--color-text-secondary)' }} />
             )}
+            {/* 主题切换 */}
+            <Button type="text" size={isMobile ? 'small' : 'large'}
+              onClick={toggleTheme}
+              style={{ fontSize: isMobile ? 16 : 18, color: 'var(--color-text-secondary)' }}>
+              {mode === 'light' ? <MoonOutlined /> : <SunOutlined />}
+            </Button>
             <Button type="text" size={isMobile ? 'small' : 'large'} onClick={() => navigate('/subscribe')}
               style={{ fontSize: isMobile ? 16 : 18, color: 'var(--color-text-secondary)' }}>
               <BellOutlined />
             </Button>
-            {isAuthenticated && user ? (
+            {!_hydrated ? (
+              <div style={{ width: 80 }} />
+            ) : isAuthenticated && user ? (
               <Dropdown menu={{ items: userMenuItems }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer', padding: '2px 6px', borderRadius: 8 }}>
                   <Avatar src={user.avatar} icon={<UserOutlined />} size={isMobile ? 28 : 32} style={{ border: '2px solid var(--color-border-light)' }} />

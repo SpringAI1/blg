@@ -3,7 +3,7 @@ import { Layout, Menu, Avatar, Dropdown, Button, Typography, Grid, Drawer, Space
 import {
   DashboardOutlined, FileTextOutlined, FolderOutlined, TagsOutlined,
   MessageOutlined, UserOutlined, LogoutOutlined, HomeOutlined,
-  ArrowLeftOutlined, MenuOutlined,
+  ArrowLeftOutlined, MenuOutlined, TeamOutlined,
 } from '@ant-design/icons';
 import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/api/auth';
@@ -36,6 +36,7 @@ const AdminLayout = () => {
     if (path.startsWith('/admin/tags')) return 'tags';
     if (path.startsWith('/admin/comments')) return 'comments';
     if (path.startsWith('/admin/profile')) return 'profile';
+    if (path.startsWith('/admin/users')) return 'users';
     return '';
   };
 
@@ -45,6 +46,7 @@ const AdminLayout = () => {
     { key: 'categories', icon: <FolderOutlined />, label: <Link to="/admin/categories">分类管理</Link> },
     { key: 'tags', icon: <TagsOutlined />, label: <Link to="/admin/tags">标签管理</Link> },
     { key: 'comments', icon: <MessageOutlined />, label: <Link to="/admin/comments">评论管理</Link> },
+    { key: 'users', icon: <TeamOutlined />, label: <Link to="/admin/users">用户管理</Link> },
     { key: 'profile', icon: <UserOutlined />, label: <Link to="/admin/profile">个人资料</Link> },
   ];
 

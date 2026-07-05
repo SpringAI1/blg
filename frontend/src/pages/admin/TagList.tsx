@@ -1,4 +1,4 @@
-import { Table, Button, Modal, Form, Input, App, Card } from 'antd';
+import { Table, Button, Modal, Form, Input, App, Card, Space } from 'antd';
 import { useEffect, useState } from 'react';
 import { ColumnType } from 'antd/es/table';
 import { Tag } from '@/types';
@@ -10,7 +10,10 @@ const TagList = () => {
   const [tags, setTags] = useState<Tag[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editingTag, setEditingTag] = useState<Tag | null>(null);
   const [form] = Form.useForm();
+  const [editForm] = Form.useForm();
 
   const fetchTags = async () => {
     setLoading(true);
@@ -51,6 +54,31 @@ const TagList = () => {
     }
   };
 
+  const handleEdit = (tag: Tag) => {
+    setEditingTag(tag);
+    editForm.setFieldsValue({
+      name: tag.name,
+      slug: (tag as any).slug || '',
+      color: (tag as any).color || '#000000',
+    });
+    setEditModalVisible(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingTag) return;
+    try {
+      const values = await editForm.validateFields();
+      await tagApi.updateTag(editingTag.id, values);
+      message.success('更新成功');
+      setEditModalVisible(false);
+      setEditingTag(null);
+      editForm.resetFields();
+      fetchTags();
+    } catch {
+      message.error('更新失败');
+    }
+  };
+
   const columns: ColumnType<Tag>[] = [
     {
       title: 'ID',
@@ -73,11 +101,16 @@ const TagList = () => {
     {
       title: '操作',
       key: 'action',
-      width: 100,
+      width: 160,
       render: (_, record) => (
-        <Button type="link" danger onClick={() => handleDelete(record.id)}>
-          删除
-        </Button>
+        <Space>
+          <Button type="link" onClick={() => handleEdit(record)}>
+            编辑
+          </Button>
+          <Button type="link" danger onClick={() => handleDelete(record.id)}>
+            删除
+          </Button>
+        </Space>
       ),
     },
   ];
@@ -122,6 +155,35 @@ const TagList = () => {
             rules={[{ required: true, message: '请输入标签名称！' }]}
           >
             <Input />
+          </Form.Item>
+        </Form>
+      </Modal>
+
+      <Modal
+        title="编辑标签"
+        open={editModalVisible}
+        onOk={handleEditSave}
+        onCancel={() => {
+          setEditModalVisible(false);
+          setEditingTag(null);
+          editForm.resetFields();
+        }}
+        okText="确定"
+        cancelText="取消"
+      >
+        <Form form={editForm} layout="vertical">
+          <Form.Item
+            name="name"
+            label="名称"
+            rules={[{ required: true, message: '请输入标签名称！' }]}
+          >
+            <Input />
+          </Form.Item>
+          <Form.Item name="slug" label="别名">
+            <Input placeholder="用于URL，如: spring-boot" />
+          </Form.Item>
+          <Form.Item name="color" label="颜色">
+            <Input type="color" />
           </Form.Item>
         </Form>
       </Modal>

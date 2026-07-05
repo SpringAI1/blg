@@ -1,6 +1,6 @@
 import { Form, Input, Select, Button, Card, Spin, App, Upload, Image } from 'antd';
 import { UploadOutlined } from '@ant-design/icons';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { articleApi } from '@/api/article';
 import { categoryApi } from '@/api/category';
@@ -9,6 +9,7 @@ import { fileApi } from '@/api/file';
 import { Category } from '@/types';
 import { Tag as TagType } from '@/types';
 import { useAuthStore } from '@/store/auth';
+import MDEditor from '@uiw/react-md-editor';
 
 const { TextArea } = Input;
 
@@ -27,7 +28,24 @@ const ArticleEditor = () => {
   const [coverImageUrl, setCoverImageUrl] = useState<string>('');
   const { isAuthenticated, token } = useAuthStore();
 
+  // 草稿自动保存
+  const DRAFT_KEY = `draft_${id || 'new'}`;
+  const [contentValue, setContentValue] = useState<string>('');
+
   useEffect(() => {
+    // 从 localStorage 检查草稿
+    try {
+      const saved = localStorage.getItem(DRAFT_KEY);
+      if (saved && !id) {
+        const draft = JSON.parse(saved);
+        if (window.confirm('检测到未发布的草稿，是否恢复？')) {
+          form.setFieldsValue(draft);
+          if (draft.content) setContentValue(draft.content);
+        } else {
+          localStorage.removeItem(DRAFT_KEY);
+        }
+      }
+    } catch { /* ignore */ }
     const fetchData = async () => {
       try {
         const [cats, tgs] = await Promise.all([
@@ -60,6 +78,22 @@ const ArticleEditor = () => {
     };
     fetchData();
   }, [id, form, navigate, message]);
+
+  // 自动保存草稿 — 每3秒将表单值写入 localStorage
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const values = form.getFieldsValue();
+      if (values.title || values.content) {
+        localStorage.setItem(DRAFT_KEY, JSON.stringify(values));
+      }
+    }, 3000);
+    return () => {
+      clearInterval(timer);
+      // 提交成功后清理草稿
+      const submitHandler = () => localStorage.removeItem(DRAFT_KEY);
+      window.addEventListener('beforeunload', submitHandler);
+    };
+  }, [form, DRAFT_KEY]);
 
   const handleImageUpload = async (file: File) => {
     setUploading(true);
@@ -214,7 +248,7 @@ const ArticleEditor = () => {
             name="content"
             rules={[{ required: true, message: '请输入内容！' }]}
           >
-            <TextArea rows={20} placeholder="使用 Markdown 编写文章内容..." />
+            <MDEditor height={500} preview="live" />
           </Form.Item>
 
           <Form.Item>

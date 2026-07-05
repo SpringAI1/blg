@@ -84,6 +84,18 @@ CREATE TABLE article_like (
 CREATE INDEX idx_article_like_article_id ON article_like(article_id);
 CREATE INDEX idx_article_like_user_id ON article_like(user_id);
 
+-- 评论点赞
+DROP TABLE IF EXISTS comment_like;
+CREATE TABLE comment_like (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    comment_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (comment_id, user_id)
+);
+CREATE INDEX idx_comment_like_comment_id ON comment_like(comment_id);
+CREATE INDEX idx_comment_like_user_id ON comment_like(user_id);
+
 -- 5. 文章标签关联表
 DROP TABLE IF EXISTS article_tag;
 CREATE TABLE article_tag (
@@ -232,3 +244,14 @@ CREATE TABLE meeting_participant (
 );
 CREATE INDEX idx_mp_meeting_id ON meeting_participant(meeting_id);
 CREATE INDEX idx_mp_user_id ON meeting_participant(user_id);
+
+-- 14. 阅读历史表
+DROP TABLE IF EXISTS read_history;
+CREATE TABLE read_history (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    article_id BIGINT NOT NULL,
+    read_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_rh_user_id ON read_history(user_id);
+CREATE INDEX idx_rh_article_id ON read_history(article_id);

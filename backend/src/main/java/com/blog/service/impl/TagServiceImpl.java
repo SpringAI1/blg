@@ -50,6 +50,21 @@ public class TagServiceImpl extends ServiceImpl<TagRepository, Tag> implements T
     }
 
     @Override
+    public TagDTO updateTag(Long id, Tag tag) {
+        Tag existing = baseMapper.selectById(id);
+        if (existing == null) return null;
+
+        if (tag.getName() != null) existing.setName(tag.getName());
+        if (tag.getSlug() != null) existing.setSlug(tag.getSlug());
+        if (tag.getColor() != null) existing.setColor(tag.getColor());
+        baseMapper.updateById(existing);
+
+        cacheService.delete(TAG_LIST_KEY);
+
+        return convertToDTO(existing);
+    }
+
+    @Override
     public void deleteTag(Long id) {
         baseMapper.deleteById(id);
 

@@ -71,35 +71,6 @@ public class DownloadController {
         Long userId = SecurityUtil.getCurrentUserId();
         downloadService.recordDownload(id, userId);
 
-        // 检查 fileUrl 是否有效（不指向 example.com 且以文件扩展名结尾）
-        String fileUrl = resource.getFileUrl();
-        boolean hasValidUrl = fileUrl != null && !fileUrl.isEmpty()
-            && !fileUrl.contains("example.com")
-            && !fileUrl.contains("react.dev")
-            && (fileUrl.endsWith(".pdf") || fileUrl.endsWith(".zip") || fileUrl.endsWith(".rar")
-                || fileUrl.endsWith(".docx") || fileUrl.endsWith(".xlsx") || fileUrl.endsWith(".pptx")
-                || fileUrl.endsWith(".png") || fileUrl.endsWith(".jpg") || fileUrl.endsWith(".mp4"));
-        if (hasValidUrl) {
-            // 有真实文件 URL，下载该文件
-            try {
-                java.net.URL url = new java.net.URL(fileUrl);
-                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(5000);
-                conn.setReadTimeout(5000);
-                if (conn.getResponseCode() == 200) {
-                    byte[] remoteContent = conn.getInputStream().readAllBytes();
-                    String fileName = getFileName(resource.getTitle(), resource.getFileType());
-                    HttpHeaders headers = new HttpHeaders();
-                    headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-                    headers.setContentDisposition(ContentDisposition.attachment().filename(fileName, StandardCharsets.UTF_8).build());
-                    headers.setContentLength(remoteContent.length);
-                    return ResponseEntity.ok().headers(headers).body(remoteContent);
-                }
-            } catch (Exception e) {
-                // 远程文件不可达，降级到生成文件
-            }
-        }
-
         // 生成真实文件内容 — 根据文件类型提供可用的格式
         byte[] fileContent;
         String fileName;

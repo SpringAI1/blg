@@ -1,3 +1,4 @@
+import { message } from 'antd';
 import { useEffect, useState } from 'react';
 import { Card, List, Tag, Typography, Empty, Spin, Row, Col, Button } from 'antd';
 import { EyeOutlined, RightOutlined, ArrowRightOutlined, CodeOutlined, FileTextOutlined, FireOutlined, MessageOutlined, ClockCircleOutlined, LikeOutlined, StarOutlined, UserOutlined, RocketOutlined } from '@ant-design/icons';
@@ -44,6 +45,7 @@ const Home = () => {
       const data = await articleApi.getPublishedArticles(1, 12);
       setArticles(data.records || []);
     } catch (error) {
+      message.error('加载文章列表失败');
     } finally {
       setLoading(false);
     }

@@ -89,6 +89,18 @@ const Search = () => {
     await runSearch(query);
   };
 
+  /** 搜索关键词高亮 — 将匹配词用黄色标记包裹 */
+  const highlightKeyword = (text: string | null | undefined, keyword: string): React.ReactNode => {
+    if (!text || !keyword) return text;
+    const escaped = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+    return parts.map((part, i) =>
+      part.toLowerCase() === keyword.toLowerCase()
+        ? <mark key={i} style={{ background: '#fff3cd', padding: '0 2px', borderRadius: 2, color: 'inherit' }}>{part}</mark>
+        : part
+    );
+  };
+
   const handleBaiduSearch = () => {
     if (!query.trim()) {
       message.warning('请输入搜索关键词');
@@ -187,10 +199,10 @@ const Search = () => {
                             )}
                             <div style={{ flex: 1 }}>
                               <Title level={4} style={{ color: '#1a1a1a', marginBottom: 8 }}>
-                                {item.title}
+                                {highlightKeyword(item.title, query)}
                               </Title>
                               <Paragraph ellipsis={{ rows: 2 }} style={{ color: '#666', marginBottom: 12 }}>
-                                {item.summary}
+                                {highlightKeyword(item.summary, query)}
                               </Paragraph>
                               <Space>
                                 <Tag color="blue">文章</Tag>
@@ -245,10 +257,10 @@ const Search = () => {
                             </div>
                             <div style={{ flex: 1 }}>
                               <Title level={4} style={{ color: '#1a1a1a', marginBottom: 8 }}>
-                                {item.title}
+                                {highlightKeyword(item.title, query)}
                               </Title>
                               <Paragraph ellipsis={{ rows: 1 }} style={{ color: '#666', marginBottom: 12 }}>
-                                {item.description}
+                                {highlightKeyword(item.description, query)}
                               </Paragraph>
                               <Space>
                                 <Tag color="green">资源</Tag>

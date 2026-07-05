@@ -41,7 +41,7 @@ const AISearch = () => {
     const keyword = searchParams.get('q') || searchParams.get('keyword') || '';
     if (keyword) {
       setInput(keyword);
-      handleSearch(keyword).catch(() => {});
+      handleSearch(keyword).catch(() => message.error('AI搜索失败'));
     }
   }, [searchParams]);
 

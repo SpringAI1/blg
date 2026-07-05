@@ -63,6 +63,7 @@ const Study = () => {
       const data = await articleApi.getPublishedArticles(1, 50, selectedCategory || undefined);
       setArticles(data.records || []);
     } catch (error) {
+      message.error('加载学习资料失败');
     } finally {
       setLoading(false);
     }
@@ -72,7 +73,7 @@ const Study = () => {
     try {
       const data = await categoryApi.getAllCategories();
       setCategories(data || []);
-    } catch { /* ignore */ }
+    } catch { message.error('加载分类失败'); }
   };
 
   const getProgress = (articleId: number): StudyProgress | undefined => studyProgress.get(articleId);

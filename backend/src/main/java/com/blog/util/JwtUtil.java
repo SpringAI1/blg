@@ -4,22 +4,30 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.security.Keys;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @Component
 public class JwtUtil {
+
+    private static final String BLACKLIST_PREFIX = "blog:token:blacklist:";
 
     @Value("${jwt.secret:blog-jwt-secret-key-2024-personal-blog-system-with-enough-length}")
     private String secret;
 
     @Value("${jwt.expiration:86400000}")
     private long expiration;
+
+    @Autowired(required = false)
+    private RedisTemplate<String, Object> redisTemplate;
 
     private Key getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes());
@@ -56,7 +64,11 @@ public class JwtUtil {
 
     public boolean validateToken(String token) {
         try {
-            parseToken(token);
+            Claims claims = parseToken(token);
+            // 检查 token 是否在黑名单中
+            if (isBlacklisted(token)) {
+                return false;
+            }
             return true;
         } catch (Exception e) {
             return false;
@@ -76,5 +88,42 @@ public class JwtUtil {
     public String getRoleFromToken(String token) {
         Claims claims = parseToken(token);
         return claims.get("role", String.class);
+    }
+
+    /**
+     * 将 token 加入黑名单（登出时调用）
+     */
+    public void blacklistToken(String token) {
+        if (redisTemplate == null) {
+            return;
+        }
+        try {
+            Claims claims = parseToken(token);
+            long ttl = claims.getExpiration().getTime() - System.currentTimeMillis();
+            if (ttl > 0) {
+                redisTemplate.opsForValue().set(
+                    BLACKLIST_PREFIX + token,
+                    "1",
+                    ttl,
+                    TimeUnit.MILLISECONDS
+                );
+            }
+        } catch (Exception e) {
+            // ignore invalid token
+        }
+    }
+
+    /**
+     * 检查 token 是否在黑名单中
+     */
+    public boolean isBlacklisted(String token) {
+        if (redisTemplate == null) {
+            return false;
+        }
+        try {
+            return Boolean.TRUE.equals(redisTemplate.hasKey(BLACKLIST_PREFIX + token));
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

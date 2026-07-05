@@ -1,6 +1,8 @@
 import { Routes, Route } from 'react-router-dom';
 import { ConfigProvider, App as AntdApp } from 'antd';
 import zhCN from 'antd/locale/zh_CN';
+import { theme } from '@/styles/theme';
+import { useThemeStore, getThemeAlgorithm } from '@/store/theme';
 import Layout from '@/components/Layout';
 import Home from '@/pages/Home';
 import Blog from '@/pages/Blog';
@@ -17,6 +19,7 @@ import CategoryList from '@/pages/admin/CategoryList';
 import TagList from '@/pages/admin/TagList';
 import CommentList from '@/pages/admin/CommentList';
 import Profile from '@/pages/admin/Profile';
+import UserManage from '@/pages/admin/UserManage';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import Favorites from '@/pages/Favorites';
 import DownloadPage from '@/pages/DownloadPage';
@@ -31,49 +34,15 @@ import UserProfile from '@/pages/UserProfile';
 import MemberCenter from '@/pages/MemberCenter';
 
 function App() {
+  const { mode } = useThemeStore();
+  const currentTheme = {
+    ...theme.antdTheme,
+    algorithm: getThemeAlgorithm(mode),
+  };
   return (
     <ConfigProvider
       locale={zhCN}
-      theme={{
-        token: {
-          colorPrimary: '#ff6b00',
-          colorLink: '#ff6b00',
-          borderRadius: 8,
-          fontFamily: "'Noto Sans SC', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif",
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.04)',
-          boxShadowSecondary: '0 4px 12px rgba(0, 0, 0, 0.06)',
-        },
-        components: {
-          Card: {
-            paddingLG: 24,
-            borderRadiusLG: 10,
-            boxShadowTertiary: '0 1px 3px rgba(0, 0, 0, 0.04)',
-          },
-          Button: {
-            borderRadiusLG: 8,
-            fontWeight: 500,
-          },
-          Menu: {
-            itemBorderRadius: 8,
-            itemMarginInline: 8,
-            itemMarginBlock: 2,
-          },
-          Input: {
-            borderRadius: 8,
-            borderRadiusLG: 8,
-          },
-          Select: {
-            borderRadius: 8,
-            borderRadiusLG: 8,
-          },
-          Modal: {
-            borderRadiusLG: 12,
-          },
-          Table: {
-            borderRadiusLG: 10,
-          },
-        },
-      }}
+      theme={currentTheme}
     >
       <AntdApp>
         <Routes>
@@ -141,6 +110,7 @@ function App() {
             <Route path="tags" element={<TagList />} />
             <Route path="comments" element={<CommentList />} />
             <Route path="profile" element={<Profile />} />
+            <Route path="users" element={<UserManage />} />
           </Route>
         </Routes>
       </AntdApp>

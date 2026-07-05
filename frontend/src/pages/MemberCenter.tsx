@@ -79,7 +79,8 @@ const MemberCenter = () => {
           bio: user.bio || '',
         });
       }
-    } catch (error) {
+    } catch (error: any) {
+      message.error(error?.message || '加载数据失败');
     } finally {
       setLoading(false);
     }

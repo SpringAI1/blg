@@ -11,6 +11,10 @@ public interface ArticleService extends IService<Article> {
 
     Page<ArticleDTO> getPublishedArticles(int pageNum, int pageSize, Long categoryId, Long tagId, String keyword);
 
+    Page<ArticleDTO> getPublishedArticles(int pageNum, int pageSize, Long categoryId, Long tagId, String keyword, String sortBy);
+
+    Page<ArticleDTO> getPublishedArticles(int pageNum, int pageSize, Long userId);
+
     Page<ArticleDTO> getAllArticles(int pageNum, int pageSize);
 
     ArticleDTO getPublishedArticle(Long id);
@@ -28,4 +32,6 @@ public interface ArticleService extends IService<Article> {
     void increaseViews(Long id);
 
     void toggleLike(Long id);
+
+    List<ArticleDTO> getRelatedArticles(Long articleId, int limit);
 }

@@ -13,6 +13,7 @@ public class CommentDTO {
     private String username;
     private String userAvatar;
     private Long parentId;
+    private Integer likes;
     private List<CommentDTO> children;
     private LocalDateTime createTime;
 }

@@ -23,7 +23,6 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -60,10 +59,16 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
 
     @Override
     public Page<ArticleDTO> getPublishedArticles(int pageNum, int pageSize, Long categoryId, Long tagId, String keyword) {
+        return getPublishedArticles(pageNum, pageSize, categoryId, tagId, keyword, null);
+    }
+
+    @Override
+    public Page<ArticleDTO> getPublishedArticles(int pageNum, int pageSize, Long categoryId, Long tagId, String keyword, String sortBy) {
         String cacheKey = ARTICLE_LIST_KEY + pageNum + ":" + pageSize + ":" +
                          (categoryId != null ? categoryId : "all") + ":" +
                          (tagId != null ? tagId : "all") + ":" +
-                         (keyword != null ? keyword : "none");
+                         (keyword != null ? keyword : "none") + ":" +
+                         (sortBy != null ? sortBy : "none");
 
         Page<ArticleDTO> cached = cacheService.get(cacheKey, Page.class);
         if (cached != null) {
@@ -102,7 +107,14 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
                 .like(Article::getSummary, keyword));
         }
 
-        wrapper.orderByDesc(Article::getCreateTime);
+        // 根据 sortBy 参数排序
+        if ("views".equals(sortBy)) {
+            wrapper.last("ORDER BY views DESC, create_time DESC");
+        } else if ("likes".equals(sortBy)) {
+            wrapper.last("ORDER BY likes DESC, create_time DESC");
+        } else {
+            wrapper.orderByDesc(Article::getCreateTime);
+        }
 
         Page<Article> articlePage = baseMapper.selectPage(page, wrapper);
 
@@ -168,6 +180,25 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
     }
 
     @Override
+    public Page<ArticleDTO> getPublishedArticles(int pageNum, int pageSize, Long userId) {
+        Page<Article> page = new Page<>(pageNum, pageSize);
+
+        LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Article::getUserId, userId);
+        wrapper.eq(Article::getStatus, "PUBLISHED");
+        wrapper.orderByDesc(Article::getCreateTime);
+
+        Page<Article> articlePage = baseMapper.selectPage(page, wrapper);
+
+        Page<ArticleDTO> dtoPage = new Page<>(articlePage.getCurrent(), articlePage.getSize(), articlePage.getTotal());
+        dtoPage.setRecords(articlePage.getRecords().stream()
+            .map(this::convertToDTO)
+            .collect(Collectors.toList()));
+
+        return dtoPage;
+    }
+
+    @Override
     public ArticleDTO getArticle(Long id) {
         Article article = baseMapper.selectById(id);
         if (article == null) {
@@ -186,10 +217,9 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
         article.setIsTop(false);
         baseMapper.insert(article);
 
-        User author = userRepository.selectById(article.getUserId());
-        if (author != null) {
-            author.setArticleCount((author.getArticleCount() == null ? 0 : author.getArticleCount()) + 1);
-            userRepository.updateById(author);
+        // 原子更新用户的文章计数
+        if (article.getUserId() != null) {
+            userRepository.incrementArticleCount(article.getUserId());
         }
 
         if (tagIds != null && !tagIds.isEmpty()) {
@@ -249,11 +279,7 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
         baseMapper.deleteById(id);
 
         if (article != null) {
-            User author = userRepository.selectById(article.getUserId());
-            if (author != null) {
-                author.setArticleCount(Math.max(0, (author.getArticleCount() == null ? 0 : author.getArticleCount()) - 1));
-                userRepository.updateById(author);
-            }
+            userRepository.decrementArticleCount(article.getUserId());
         }
 
         cacheService.delete(ARTICLE_KEY + id);
@@ -262,13 +288,8 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
 
     @Override
     public void increaseViews(Long id) {
-        Article article = baseMapper.selectById(id);
-        if (article != null) {
-            article.setViews((article.getViews() == null ? 0 : article.getViews()) + 1);
-            baseMapper.updateById(article);
-
-            cacheService.delete(ARTICLE_KEY + id);
-        }
+        baseMapper.incrementViews(id);
+        cacheService.delete(ARTICLE_KEY + id);
     }
 
     @Override
@@ -289,17 +310,16 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
         if (articleLikeRepository.selectCount(likeCheck) > 0) {
             // 已点赞 → 取消点赞
             articleLikeRepository.delete(likeCheck);
-            article.setLikes(Math.max(0, (article.getLikes() == null ? 0 : article.getLikes()) - 1));
+            baseMapper.decrementLikes(id);
         } else {
             // 未点赞 → 点赞
             ArticleLike like = new ArticleLike();
             like.setArticleId(id);
             like.setUserId(userId);
             articleLikeRepository.insert(like);
-            article.setLikes((article.getLikes() == null ? 0 : article.getLikes()) + 1);
+            baseMapper.incrementLikes(id);
         }
 
-        baseMapper.updateById(article);
         cacheService.delete(ARTICLE_KEY + id);
     }
 
@@ -332,5 +352,44 @@ public class ArticleServiceImpl extends ServiceImpl<ArticleRepository, Article> 
         }).collect(Collectors.toList()));
 
         return dto;
+    }
+
+    @Override
+    public List<ArticleDTO> getRelatedArticles(Long articleId, int limit) {
+        Article article = baseMapper.selectById(articleId);
+        if (article == null) return Collections.emptyList();
+
+        // 按同分类或同标签查询已发布文章（排除自己）
+        LambdaQueryWrapper<Article> wrapper = new LambdaQueryWrapper<Article>()
+            .eq(Article::getStatus, "PUBLISHED")
+            .ne(Article::getId, articleId)
+            .and(w -> {
+                boolean hasCategory = article.getCategoryId() != null;
+                if (hasCategory) {
+                    w.eq(Article::getCategoryId, article.getCategoryId());
+                }
+                // 如果有标签关联，也按标签匹配
+                List<ArticleTag> articleTags = articleTagRepository.selectList(
+                    new LambdaQueryWrapper<ArticleTag>().eq(ArticleTag::getArticleId, articleId)
+                );
+                if (!articleTags.isEmpty()) {
+                    List<Long> tagIds = articleTags.stream().map(ArticleTag::getTagId).collect(Collectors.toList());
+                    List<Long> relatedIds = articleTagRepository.selectList(
+                        new LambdaQueryWrapper<ArticleTag>().in(ArticleTag::getTagId, tagIds)
+                    ).stream().map(ArticleTag::getArticleId).filter(aid -> !aid.equals(articleId)).collect(Collectors.toList());
+                    if (!relatedIds.isEmpty()) {
+                        if (hasCategory) {
+                            w.in(Article::getId, relatedIds);
+                        } else {
+                            w.in(Article::getId, relatedIds);
+                        }
+                    }
+                }
+            })
+            .orderByDesc(Article::getViews)
+            .last("LIMIT " + limit);
+
+        List<Article> related = baseMapper.selectList(wrapper);
+        return related.stream().map(this::convertToDTO).collect(Collectors.toList());
     }
 }

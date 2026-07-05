@@ -118,19 +118,9 @@ public class FollowController {
         follow.setFollowerId(userId);
         followRepository.insert(follow);
 
-        // 更新被关注者的 followerCount
-        User following = userRepository.selectById(follow.getFollowingId());
-        if (following != null) {
-            following.setFollowerCount(following.getFollowerCount() == null ? 1 : following.getFollowerCount() + 1);
-            userRepository.updateById(following);
-        }
-
-        // 更新关注者的 followingCount
-        User follower = userRepository.selectById(userId);
-        if (follower != null) {
-            follower.setFollowingCount(follower.getFollowingCount() == null ? 1 : follower.getFollowingCount() + 1);
-            userRepository.updateById(follower);
-        }
+        // 原子更新关注计数
+        userRepository.incrementFollowerCount(follow.getFollowingId());
+        userRepository.incrementFollowingCount(userId);
 
         return Result.success("关注成功");
     }
@@ -144,19 +134,9 @@ public class FollowController {
         // 物理删除（绕过逻辑删除），避免再次关注时 UNIQUE 约束冲突
         followRepository.deletePhysical(userId, followingId);
 
-        // 更新被关注者的 followerCount
-        User following = userRepository.selectById(followingId);
-        if (following != null && following.getFollowerCount() != null && following.getFollowerCount() > 0) {
-            following.setFollowerCount(following.getFollowerCount() - 1);
-            userRepository.updateById(following);
-        }
-
-        // 更新关注者的 followingCount
-        User follower = userRepository.selectById(userId);
-        if (follower != null && follower.getFollowingCount() != null && follower.getFollowingCount() > 0) {
-            follower.setFollowingCount(follower.getFollowingCount() - 1);
-            userRepository.updateById(follower);
-        }
+        // 原子更新关注计数
+        userRepository.decrementFollowerCount(followingId);
+        userRepository.decrementFollowingCount(userId);
 
         return Result.success("取消关注成功");
     }

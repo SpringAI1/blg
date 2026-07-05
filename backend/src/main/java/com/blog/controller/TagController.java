@@ -34,4 +34,10 @@ public class TagController {
         tagService.deleteTag(id);
         return Result.success();
     }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<TagDTO> updateTag(@PathVariable Long id, @RequestBody Tag tag) {
+        return Result.success(tagService.updateTag(id, tag));
+    }
 }

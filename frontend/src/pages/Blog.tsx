@@ -25,11 +25,12 @@ const Blog = () => {
   const fetchArticles = async (pageNum: number) => {
     setLoading(true);
     try {
-      const data = await articleApi.getPublishedArticles(pageNum, 10, selectedCategory || undefined, selectedTag || undefined);
+      const data = await articleApi.getPublishedArticles(pageNum, 10, selectedCategory || undefined, selectedTag || undefined, undefined, sortBy !== 'latest' ? sortBy : undefined);
       setArticles(data.records);
       setTotal(data.total);
       setPage(pageNum);
     } catch (error) {
+      message.error('加载文章列表失败');
     } finally {
       setLoading(false);
     }
@@ -40,6 +41,7 @@ const Blog = () => {
       const data = await categoryApi.getAllCategories();
       setCategories(data);
     } catch (error) {
+      message.error('加载分类失败');
     }
   };
 
@@ -48,6 +50,7 @@ const Blog = () => {
       const data = await tagApi.getAllTags();
       setTags(data);
     } catch (error) {
+      message.error('加载标签失败');
     }
   };
 

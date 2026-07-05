@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, List, Typography, Tag, Empty, Spin, App, Space, Button } from 'antd';
 import { HistoryOutlined, EyeOutlined, LikeOutlined, ClockCircleOutlined, DeleteOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
@@ -53,6 +53,7 @@ const History = () => {
       });
       setArticles(loaded);
     } catch (error) {
+      message.error('加载历史记录失败');
     } finally {
       setLoading(false);
     }

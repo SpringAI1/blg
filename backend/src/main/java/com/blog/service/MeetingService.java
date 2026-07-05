@@ -86,7 +86,8 @@ public class MeetingService {
             participantRepository.insert(mp);
         }
 
-        meeting.setParticipantCount(meeting.getParticipantCount() == null ? 1 : meeting.getParticipantCount() + 1);
+        // 原子更新参与者计数
+        meetingRepository.incrementParticipantCount(meetingId);
         meeting.setUpdateTime(LocalDateTime.now());
         meetingRepository.updateById(meeting);
     }
@@ -99,12 +100,8 @@ public class MeetingService {
         mp.setDeleted(1);
         participantRepository.updateById(mp);
 
-        Meeting meeting = meetingRepository.selectById(meetingId);
-        if (meeting != null && meeting.getParticipantCount() != null && meeting.getParticipantCount() > 0) {
-            meeting.setParticipantCount(meeting.getParticipantCount() - 1);
-            meeting.setUpdateTime(LocalDateTime.now());
-            meetingRepository.updateById(meeting);
-        }
+        // 原子更新参与者计数
+        meetingRepository.decrementParticipantCount(meetingId);
     }
 
     public List<MeetingParticipant> getParticipants(Long meetingId) {

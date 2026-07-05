@@ -14,6 +14,7 @@ import { meetingApi, Meeting, MeetingParticipant } from '@/api/meeting';
 import { fileApi } from '@/api/file';
 import { useAuthStore } from '@/store/auth';
 import { Client } from '@stomp/stompjs';
+import { colors, radius, shadow, space, transition, fontSize, font } from '@/styles/theme';
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -109,11 +110,11 @@ const MeetingRoom = () => {
   const connectWebSocket = () => {
     const token = localStorage.getItem('token');
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsUrl = `${protocol}//${window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host}/ws`;
+    const host = window.location.hostname === 'localhost' ? 'localhost:8080' : window.location.host;
+    const wsUrl = `${protocol}//${host}/ws${token ? '?token=' + encodeURIComponent(token) : ''}`;
 
     const client = new Client({
       brokerURL: wsUrl,
-      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 3000,
       heartbeatIncoming: 10000, heartbeatOutgoing: 10000,
       onConnect: () => {

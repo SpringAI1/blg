@@ -10,6 +10,7 @@ export interface CommentDTO {
   parentId: number | null;
   children?: CommentDTO[];
   createTime: string;
+  likes?: number;
 }
 
 export const commentApi = {
@@ -24,4 +25,7 @@ export const commentApi = {
 
   getAllComments: () =>
     apiGet<CommentDTO[]>('/comments/all'),
+
+  toggleLike: (id: number) =>
+    apiPost<void>(`/comments/${id}/like`),
 };

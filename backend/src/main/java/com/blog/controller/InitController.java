@@ -1,20 +1,22 @@
 package com.blog.controller;
 
+import com.blog.util.SqlParserUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.util.FileCopyUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/init")
+@PreAuthorize("hasRole('ADMIN')")
 public class InitController {
 
     @Autowired
@@ -57,7 +59,7 @@ public class InitController {
             ClassPathResource resource = new ClassPathResource("schema-h2.sql");
             if (resource.exists()) {
                 String sql = FileCopyUtils.copyToString(new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8));
-                List<String> statements = parseSqlStatements(sql);
+                List<String> statements = SqlParserUtil.parseSqlStatements(sql);
                 
                 int successCount = 0;
                 int errorCount = 0;
@@ -86,72 +88,5 @@ public class InitController {
             e.printStackTrace();
         }
         return result;
-    }
-
-    private List<String> parseSqlStatements(String sql) {
-        List<String> statements = new ArrayList<>();
-        StringBuilder current = new StringBuilder();
-        boolean inString = false;
-        char stringChar = '\0';
-        boolean inCommentLine = false;
-        boolean inCommentBlock = false;
-
-        for (int i = 0; i < sql.length(); i++) {
-            char c = sql.charAt(i);
-            
-            // 处理注释
-            if (inCommentLine) {
-                if (c == '\n' || c == '\r') {
-                    inCommentLine = false;
-                }
-                continue;
-            }
-            if (inCommentBlock) {
-                if (c == '*' && i + 1 < sql.length() && sql.charAt(i + 1) == '/') {
-                    inCommentBlock = false;
-                    i++;
-                }
-                continue;
-            }
-            
-            // 检查注释开始
-            if (!inString && c == '-' && i + 1 < sql.length() && sql.charAt(i + 1) == '-') {
-                inCommentLine = true;
-                i++;
-                continue;
-            }
-            if (!inString && c == '/' && i + 1 < sql.length() && sql.charAt(i + 1) == '*') {
-                inCommentBlock = true;
-                i++;
-                continue;
-            }
-            
-            // 处理字符串
-            if ((c == '\'' || c == '\"') && !inString) {
-                inString = true;
-                stringChar = c;
-            } else if (inString && c == stringChar) {
-                inString = false;
-            }
-            
-            // 处理语句结束
-            if (!inString && c == ';') {
-                String trimmed = current.toString().trim();
-                if (!trimmed.isEmpty()) {
-                    statements.add(trimmed);
-                }
-                current.setLength(0);
-            } else {
-                current.append(c);
-            }
-        }
-        
-        // 添加最后一条语句
-        String trimmed = current.toString().trim();
-        if (!trimmed.isEmpty()) {
-            statements.add(trimmed);
-        }
-        
-        return statements;
     }
 }

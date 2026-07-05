@@ -38,11 +38,10 @@ const UserProfile = () => {
     try {
       const userData = await userApi.getUserInfo(userId);
       setProfile(userData);
-      
+
       // 获取该用户发布的文章
-      const articleData = await articleApi.getPublishedArticles(1, 20);
-      const userArticles = articleData.records?.filter(a => a.userId === userId) || [];
-      setArticles(userArticles);
+      const articleData = await articleApi.getArticlesByUserId(userId, 1, 20);
+      setArticles(articleData.records || []);
     } catch (error) {
       message.error('用户不存在');
     } finally {

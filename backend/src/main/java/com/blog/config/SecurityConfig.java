@@ -46,7 +46,6 @@ public class SecurityConfig {
                     "/api/auth/login",
                     "/api/auth/register",
                     "/api/auth/logout",
-                    "/api/init/**",
                     "/uploads/**",
                     "/api/files/upload"
                 ).permitAll()

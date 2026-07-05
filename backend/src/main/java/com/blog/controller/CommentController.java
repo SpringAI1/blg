@@ -5,6 +5,7 @@ import com.blog.entity.Comment;
 import com.blog.service.CommentService;
 import com.blog.dto.CommentDTO;
 import com.blog.util.SecurityUtil;
+import com.blog.util.XssUtil;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +20,8 @@ public class CommentController {
 
     @GetMapping("/articles/{id}/comments")
     public Result<List<CommentDTO>> getCommentsByArticle(@PathVariable Long id) {
-        return Result.success(commentService.getCommentsByArticle(id));
+        Long userId = SecurityUtil.getCurrentUserId();
+        return Result.success(commentService.getCommentsByArticle(id, userId));
     }
 
     @GetMapping("/comments/all")
@@ -39,7 +41,7 @@ public class CommentController {
             return Result.error(400, "评论内容不能为空");
         }
 
-        CommentDTO saved = commentService.createComment(id, userId, comment.getContent(), comment.getParentId());
+        CommentDTO saved = commentService.createComment(id, userId, XssUtil.sanitize(comment.getContent()), comment.getParentId());
         return Result.success(saved);
     }
 
@@ -65,6 +67,16 @@ public class CommentController {
         }
 
         commentService.deleteComment(id);
+        return Result.success();
+    }
+
+    @PostMapping("/comments/{id}/like")
+    public Result<Void> toggleLike(@PathVariable Long id) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) {
+            return Result.error(401, "请先登录");
+        }
+        commentService.toggleLike(id, userId);
         return Result.success();
     }
 }

@@ -139,32 +139,23 @@ public class DownloadServiceImpl extends ServiceImpl<DownloadResourceRepository,
 
     @Override
     public void increaseViews(Long id) {
-        DownloadResource resource = baseMapper.selectById(id);
-        if (resource != null) {
-            resource.setViews(resource.getViews() + 1);
-            baseMapper.updateById(resource);
-
-            cacheService.delete(RESOURCE_KEY + id);
-            cacheService.deleteByPattern(RESOURCE_LIST_KEY + "*");
-        }
+        baseMapper.incrementViews(id);
+        cacheService.delete(RESOURCE_KEY + id);
+        cacheService.deleteByPattern(RESOURCE_LIST_KEY + "*");
     }
 
     @Override
     @Transactional
     public void recordDownload(Long resourceId, Long userId) {
-        DownloadResource resource = baseMapper.selectById(resourceId);
-        if (resource != null) {
-            resource.setDownloadCount(resource.getDownloadCount() + 1);
-            baseMapper.updateById(resource);
+        baseMapper.incrementDownloadCount(resourceId);
 
-            DownloadRecord record = new DownloadRecord();
-            record.setResourceId(resourceId);
-            record.setUserId(userId);
-            recordRepository.insert(record);
+        DownloadRecord record = new DownloadRecord();
+        record.setResourceId(resourceId);
+        record.setUserId(userId);
+        recordRepository.insert(record);
 
-            cacheService.delete(RESOURCE_KEY + resourceId);
-            cacheService.deleteByPattern(RESOURCE_LIST_KEY + "*");
-        }
+        cacheService.delete(RESOURCE_KEY + resourceId);
+        cacheService.deleteByPattern(RESOURCE_LIST_KEY + "*");
     }
 
     private DownloadResourceDTO convertToDTO(DownloadResource resource) {

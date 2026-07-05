@@ -33,6 +33,7 @@ const Favorites = () => {
       setFavTotal(res?.total || 0);
       setPage(pageNum);
     } catch (error) {
+      message.error('加载收藏列表失败');
     } finally {
       setLoading(false);
     }
