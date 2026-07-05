@@ -20,7 +20,7 @@ public class AiSearchController {
     @Value("${ai.api-key:}")
     private String apiKey;
 
-    @Value("${ai.model:qwen-plus}")
+    @Value("${ai.model:qwen-turbo}")
     private String model;
 
     @Value("${ai.base-url:https://dashscope.aliyuncs.com/compatible-mode/v1}")
