@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { Card, Typography, Button, Space, App } from 'antd';
 import { RobotOutlined, SendOutlined, LoadingOutlined } from '@ant-design/icons';
 import { useState, useRef, useEffect } from 'react';
-import { searchApi } from '@/api/search';
+import { aiApi } from '@/api/ai';
 
 const { Title, Text } = Typography;
 
@@ -10,7 +10,6 @@ interface Message {
   id: number;
   role: 'user' | 'assistant';
   content: string;
-  results?: { id: number; title: string; type: 'article' | 'resource'; link: string }[];
   timestamp: string;
 }
 
@@ -21,7 +20,7 @@ const AISearch = () => {
     {
       id: 1,
       role: 'assistant',
-      content: '你好！我是AI搜索助手。我可以帮助你：\n\n1. 搜索站内文章和资源\n2. 回答技术问题\n3. 提供相关链接\n\n有什么我可以帮助你的吗？',
+      content: '你好！我是AI搜索助手，由通义千问驱动。我可以帮助你：\n\n1. 回答技术问题\n2. 解释代码概念\n3. 提供技术建议\n\n有什么我可以帮助你的吗？',
       timestamp: new Date().toLocaleTimeString(),
     },
   ]);
@@ -63,51 +62,17 @@ const AISearch = () => {
     setLoading(true);
 
     try {
-      // 使用真实搜索 API
-      const response = await searchApi.searchAll(query);
-      const articles = response?.articles || [];
-      const resources = response?.resources || [];
-
-      let aiResponse = '';
-      const results: { id: number; title: string; type: 'article' | 'resource'; link: string }[] = [];
-
-      if (articles.length === 0 && resources.length === 0) {
-        aiResponse = `关于"${query}"，没有找到相关的站内内容。建议：\n\n1. 尝试其他关键词搜索\n2. 使用百度搜索获取更广泛的结果\n3. 浏览博客页面发现最新文章`;
-      } else {
-        aiResponse = `关于"${query}"，我找到了以下内容：\n\n`;
-
-        if (articles.length > 0) {
-          aiResponse += `**📄 文章 (${articles.length}篇)**\n\n`;
-          articles.slice(0, 5).forEach((a: any, i: number) => {
-            aiResponse += `${i + 1}. [${a.title}](/article/${a.id}) — ${a.summary?.substring(0, 60) || ''}...\n`;
-            results.push({ id: a.id, title: a.title, type: 'article', link: `/article/${a.id}` });
-          });
-          aiResponse += '\n';
-        }
-
-        if (resources.length > 0) {
-          aiResponse += `**📦 资源 (${resources.length}个)**\n\n`;
-          resources.slice(0, 5).forEach((r: any, i: number) => {
-            aiResponse += `${i + 1}. [${r.title}](/download?highlight=${r.id}) — ${r.description?.substring(0, 60) || ''}...\n`;
-            results.push({ id: r.id, title: r.title, type: 'resource', link: `/download?highlight=${r.id}` });
-          });
-          aiResponse += '\n';
-        }
-
-        aiResponse += `---\n*以上结果来自站内搜索，点击标题可直接访问。*`;
-      }
-
+      const response = await aiApi.aiSearch(query);
       const assistantMessage: Message = {
         id: Date.now() + 1,
         role: 'assistant',
-        content: aiResponse,
-        results: results.length > 0 ? results : undefined,
+        content: response.answer,
         timestamp: new Date().toLocaleTimeString(),
       };
 
       setMessages(prev => [...prev, assistantMessage]);
-    } catch (error) {
-      message.error('搜索失败，请稍后重试');
+    } catch (error: any) {
+      message.error(error.message || 'AI搜索失败');
       setMessages(prev => [...prev, {
         id: Date.now() + 1,
         role: 'assistant',

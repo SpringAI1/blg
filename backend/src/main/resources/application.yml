@@ -48,3 +48,8 @@ jwt:
 logging:
   level:
     com.blog: debug
+
+ai:
+  api-key: ${AI_API_KEY:sk-a9b17b03f8aa45b288322ec0797f8e57}
+  model: qwen-plus
+  base-url: https://dashscope.aliyuncs.com/compatible-mode/v1

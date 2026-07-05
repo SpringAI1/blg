@@ -163,6 +163,7 @@ CREATE TABLE `favorite` (
     `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
     `user_id` BIGINT NOT NULL COMMENT '用户ID',
     `article_id` BIGINT NOT NULL COMMENT '文章ID',
+    `collection_name` VARCHAR(100) DEFAULT NULL COMMENT '收藏分类',
     `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
     `deleted` TINYINT DEFAULT 0 COMMENT '逻辑删除',
     PRIMARY KEY (`id`),
@@ -391,3 +392,22 @@ CREATE TABLE `read_history` (
     INDEX `idx_user_id` (`user_id`),
     INDEX `idx_article_id` (`article_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='阅读历史表';
+
+-- =====================================================
+-- 15. 通知表
+-- =====================================================
+DROP TABLE IF EXISTS `notification`;
+CREATE TABLE `notification` (
+    `id` BIGINT NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `user_id` BIGINT NOT NULL COMMENT '接收通知的用户ID',
+    `type` VARCHAR(30) NOT NULL COMMENT '通知类型(COMMENT/REPLY/LIKE/FOLLOW)',
+    `content` TEXT NOT NULL COMMENT '通知内容',
+    `related_user_id` BIGINT DEFAULT NULL COMMENT '触发者用户ID',
+    `related_article_id` BIGINT DEFAULT NULL COMMENT '相关文章ID',
+    `related_comment_id` BIGINT DEFAULT NULL COMMENT '相关评论ID',
+    `is_read` TINYINT DEFAULT 0 COMMENT '是否已读',
+    `create_time` DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+    PRIMARY KEY (`id`),
+    INDEX `idx_user_id` (`user_id`),
+    INDEX `idx_is_read` (`is_read`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='通知表';

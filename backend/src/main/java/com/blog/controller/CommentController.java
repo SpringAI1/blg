@@ -3,6 +3,7 @@ package com.blog.controller;
 import com.blog.common.Result;
 import com.blog.entity.Comment;
 import com.blog.service.CommentService;
+import com.blog.service.NotificationService;
 import com.blog.dto.CommentDTO;
 import com.blog.util.SecurityUtil;
 import com.blog.util.XssUtil;
@@ -17,6 +18,9 @@ public class CommentController {
 
     @Autowired
     private CommentService commentService;
+
+    @Autowired
+    private NotificationService notificationService;
 
     @GetMapping("/articles/{id}/comments")
     public Result<List<CommentDTO>> getCommentsByArticle(@PathVariable Long id) {
@@ -42,6 +46,24 @@ public class CommentController {
         }
 
         CommentDTO saved = commentService.createComment(id, userId, XssUtil.sanitize(comment.getContent()), comment.getParentId());
+
+        // 通知文章作者（评论）或被回复者（回复）
+        Comment existing = commentService.getById(comment.getParentId());
+        Long notifyUserId;
+        String notifyType;
+        if (comment.getParentId() != null && existing != null) {
+            notifyUserId = existing.getUserId();
+            notifyType = "REPLY";
+        } else {
+            notifyUserId = commentService.getArticleAuthorId(id);
+            notifyType = "COMMENT";
+        }
+        if (notifyUserId != null && !notifyUserId.equals(userId)) {
+            notificationService.createNotification(notifyUserId, notifyType,
+                XssUtil.sanitize(comment.getContent()).substring(0, Math.min(100, comment.getContent().length())),
+                userId, id, saved != null ? saved.getId() : null);
+        }
+
         return Result.success(saved);
     }
 

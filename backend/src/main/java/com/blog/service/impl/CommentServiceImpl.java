@@ -2,6 +2,7 @@ package com.blog.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.blog.entity.Article;
 import com.blog.entity.Comment;
 import com.blog.entity.CommentLike;
 import com.blog.entity.User;
@@ -184,5 +185,11 @@ public class CommentServiceImpl extends ServiceImpl<CommentRepository, Comment> 
             .filter(c -> parentId.equals(c.getParentId()))
             .peek(c -> c.setChildren(new ArrayList<>()))
             .collect(Collectors.toList());
+    }
+
+    @Override
+    public Long getArticleAuthorId(Long articleId) {
+        Article article = articleRepository.selectById(articleId);
+        return article != null ? article.getUserId() : null;
     }
 }

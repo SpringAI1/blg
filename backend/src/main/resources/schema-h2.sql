@@ -130,6 +130,7 @@ CREATE TABLE favorite (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
     user_id BIGINT NOT NULL,
     article_id BIGINT NOT NULL,
+    collection_name VARCHAR(100) DEFAULT NULL,
     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     deleted TINYINT DEFAULT 0,
     UNIQUE (user_id, article_id)
@@ -255,3 +256,18 @@ CREATE TABLE read_history (
 );
 CREATE INDEX idx_rh_user_id ON read_history(user_id);
 CREATE INDEX idx_rh_article_id ON read_history(article_id);
+-- 15. 通知表
+DROP TABLE IF EXISTS notification;
+CREATE TABLE notification (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(30) NOT NULL,
+    content TEXT NOT NULL,
+    related_user_id BIGINT,
+    related_article_id BIGINT,
+    related_comment_id BIGINT,
+    is_read BOOLEAN DEFAULT FALSE,
+    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+CREATE INDEX idx_notification_user_id ON notification(user_id);
+CREATE INDEX idx_notification_is_read ON notification(is_read);

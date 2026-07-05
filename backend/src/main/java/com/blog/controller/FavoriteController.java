@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -28,12 +29,17 @@ public class FavoriteController {
     @GetMapping
     public Result<Page<Article>> getMyFavorites(
                                     @RequestParam(defaultValue = "1") Integer pageNum,
-                                    @RequestParam(defaultValue = "10") Integer pageSize) {
+                                    @RequestParam(defaultValue = "10") Integer pageSize,
+                                    @RequestParam(required = false) String collectionName) {
         Long userId = SecurityUtil.getCurrentUserId();
         if (userId == null) return Result.error(401, "请先登录");
 
         LambdaQueryWrapper<Favorite> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(Favorite::getUserId, userId).orderByDesc(Favorite::getCreateTime);
+        wrapper.eq(Favorite::getUserId, userId);
+        if (collectionName != null && !collectionName.isEmpty()) {
+            wrapper.eq(Favorite::getCollectionName, collectionName);
+        }
+        wrapper.orderByDesc(Favorite::getCreateTime);
         Page<Favorite> page = new Page<>(pageNum, pageSize);
         Page<Favorite> resultPage = favoriteRepository.selectPage(page, wrapper);
 
@@ -99,5 +105,41 @@ public class FavoriteController {
         boolean exists = favoriteRepository.selectCount(wrapper) > 0;
 
         return Result.success(exists);
+    }
+
+    @PutMapping("/{articleId}/collection")
+    public Result<Void> updateCollection(@PathVariable Long articleId,
+                                          @RequestBody Map<String, String> body) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) return Result.error(401, "请先登录");
+
+        LambdaQueryWrapper<Favorite> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Favorite::getUserId, userId).eq(Favorite::getArticleId, articleId);
+        Favorite favorite = favoriteRepository.selectOne(wrapper);
+        if (favorite == null) return Result.error(404, "收藏记录不存在");
+
+        favorite.setCollectionName(body.get("collectionName"));
+        favoriteRepository.updateById(favorite);
+        return Result.success();
+    }
+
+    @GetMapping("/collections")
+    public Result<List<String>> getCollections() {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId == null) return Result.error(401, "请先登录");
+
+        List<Favorite> favorites = favoriteRepository.selectList(
+            new LambdaQueryWrapper<Favorite>()
+                .eq(Favorite::getUserId, userId)
+                .isNotNull(Favorite::getCollectionName)
+                .select(Favorite::getCollectionName)
+                .groupBy(Favorite::getCollectionName)
+        );
+        List<String> collections = favorites.stream()
+            .map(Favorite::getCollectionName)
+            .filter(java.util.Objects::nonNull)
+            .distinct()
+            .collect(Collectors.toList());
+        return Result.success(collections);
     }
 }

@@ -11,4 +11,5 @@ public interface CommentService extends IService<Comment> {
     void deleteComment(Long id);
     List<CommentDTO> getAllComments();
     void toggleLike(Long commentId, Long userId);
+    Long getArticleAuthorId(Long articleId);
 }

@@ -11,6 +11,7 @@ import { useAuthStore } from '@/store/auth';
 import { authApi } from '@/api/auth';
 import { useState } from 'react';
 import { useThemeStore } from '@/store/theme';
+import NotificationBell from './NotificationBell';
 
 const { Header, Content, Sider } = AntLayout;
 const { useBreakpoint } = Grid;
@@ -182,6 +183,7 @@ const LayoutComponent = () => {
               style={{ fontSize: isMobile ? 16 : 18, color: 'var(--color-text-secondary)' }}>
               <BellOutlined />
             </Button>
+            {isAuthenticated && <NotificationBell />}
             {!_hydrated ? (
               <div style={{ width: 80 }} />
             ) : isAuthenticated && user ? (

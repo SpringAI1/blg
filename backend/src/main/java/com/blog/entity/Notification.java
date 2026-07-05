@@ -5,19 +5,26 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("favorite")
-public class Favorite {
+@TableName("notification")
+public class Notification {
+
     @TableId(type = IdType.AUTO)
     private Long id;
 
     private Long userId;
-    private Long articleId;
 
-    private String collectionName;
+    private String type;
+
+    private String content;
+
+    private Long relatedUserId;
+
+    private Long relatedArticleId;
+
+    private Long relatedCommentId;
+
+    private Boolean isRead = false;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
-
-    @TableLogic
-    private Integer deleted;
 }
